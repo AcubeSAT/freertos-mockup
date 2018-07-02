@@ -11,4 +11,9 @@ extern uint8_t TWIReadACK(void); //Check if you received the acknowledgment from
 extern uint8_t TWIReadNACK(void); //Expect no acknowledgment
 extern void TWISendAddr(uint8_t addr, uint8_t tr_dir);
 
+extern uint8_t TWIReadByte(uint8_t dev_addr, uint8_t registe); //Read a single byte from the slave
+extern void TWIReadBytes(uint8_t dev_addr, uint8_t registe, uint8_t *byte_read, uint8_t byte_count); //Read many bytes at once
+extern void TWIWriteByte(uint8_t dev_addr, uint8_t command_register, uint8_t command); //Write a byte from the slave
+//A function to write many bytes will be implemented soon
+
 #endif

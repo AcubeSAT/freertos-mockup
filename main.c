@@ -14,15 +14,32 @@
 #include "task.h"
 #include "queue.h"
 #include "semphr.h"
+#include "event_groups.h"
+
+#define SAT_Acq_Period_ms 7 // The acquisition period of the satellite
+#define SAT_Serial_Debug 1 // Whether to send debug data serially
 
 float gyrCal[3]; //Save the calibration values
 
 volatile uint8_t stopRX = 0; //Logic variable to indicate the stopping of the RX
+uint8_t nRF24_payload[32]; //Buffer to store a payload of maximum width	
+
+struct SensorData_t {
+	double brightness;
+	float acc[6];
+} xSensorData;
 
 // TODO: Use dynamic allocation for message strings
 typedef char * UARTMessage_t;
 SemaphoreHandle_t xI2CSemaphore;
 QueueHandle_t xUARTQueue;
+EventGroupHandle_t xDataEventGroup; // Event group for reception of data from sensors
+
+#define DATA_EVENT_GROUP_BH1750_Pos   0
+#define DATA_EVENT_GROUP_MPU6050_Pos  1
+
+#define DATA_EVENT_GROUP_BH1750_Msk  (1 << 0)
+#define DATA_EVENT_GROUP_MPU6050_Msk (1 << 1)
 
 void prvSetupHardware();
 
@@ -58,7 +75,8 @@ void osQueueUARTMessage(const char * format, ...)
 
 static void vBlinkyTask(void *pvParameters)
 {
-	const float frequency = 0.0007;
+	//const float frequency = 0.0007;
+	const float frequency = 0.007;
 	
   while(1) {
 		float ticks = xTaskGetTickCount();
@@ -72,7 +90,7 @@ static void vBlinkyTask(void *pvParameters)
 		TIM4->CCR3 = (int) value1;
 		TIM4->CCR4 = (int) value2;
 		
-		vTaskDelay(pdMS_TO_TICKS(1));
+		vTaskDelay(pdMS_TO_TICKS(5));
 	}
 }
 static void vUARTTask(void *pvParameters)
@@ -90,19 +108,20 @@ static void vBH1750Task(void *pvParameters)
 {
 	// Store the last wake time so that we can delay later
 	TickType_t xLastWakeTime = xTaskGetTickCount();
-	
+
 	while(1) {
-		double bright;
 		if (xSemaphoreTake(xI2CSemaphore, pdMS_TO_TICKS(250)) == pdFALSE) {
 			UART_SendStr("FATAL Error: I2C timeout");
 			vTaskSuspend(NULL); // Stop this task
 		}	else {
-			bright = BH1750_GetBrightnessCont();
+			xSensorData.brightness = BH1750_GetBrightnessCont();
 			xSemaphoreGive(xI2CSemaphore);
-			osQueueUARTMessage("I got a value from the brightness sensor! So awesome! %f\r\n", 10 * bright);
+			xEventGroupSetBits(xDataEventGroup, DATA_EVENT_GROUP_BH1750_Msk);
+			
+			if (SAT_Serial_Debug) osQueueUARTMessage("bright dump %f\r\n", xSensorData.brightness);
 		}
 		
-		vTaskDelayUntil( &xLastWakeTime, pdMS_TO_TICKS( 250 ) );
+		vTaskDelayUntil( &xLastWakeTime, pdMS_TO_TICKS( SAT_Acq_Period_ms ) );
 	}
 }
 
@@ -111,23 +130,25 @@ static void vMPU6050Task(void *pvParameters)
 	// Store the last wake time so that we can delay later
 	TickType_t xLastWakeTime = xTaskGetTickCount();
 	
-	float acgrData[6];
-	
 	while(1) {
 		if (xSemaphoreTake(xI2CSemaphore, pdMS_TO_TICKS(250)) == pdFALSE) {
 			UART_SendStr("FATAL Error: I2C timeout");
 			vTaskSuspend(NULL); // Stop this task
 		} else {
-			MPU6050_GetCalibAccelGyro(acgrData, gyrCal); 
+			MPU6050_GetCalibAccelGyro(xSensorData.acc, gyrCal); 
 			xSemaphoreGive(xI2CSemaphore);
 
-			osQueueUARTMessage("I got a value from the acceleration sensor! So awesome! %f %f %f\r\n",
-				100 * acgrData[0],
-				100 * acgrData[1],
-				100 * acgrData[2]);
+			xEventGroupSetBits(xDataEventGroup, DATA_EVENT_GROUP_MPU6050_Msk);
+			
+			if (SAT_Serial_Debug) {
+				osQueueUARTMessage("acc dump %f %f %f\r\n",
+					100 * xSensorData.acc[0],
+					100 * xSensorData.acc[1],
+					100 * xSensorData.acc[2]);
+			}
 		}
 		
-		vTaskDelayUntil( &xLastWakeTime, pdMS_TO_TICKS( 250 ) );
+		vTaskDelayUntil( &xLastWakeTime, pdMS_TO_TICKS( SAT_Acq_Period_ms ) );
 	}
 }
 
@@ -145,6 +166,44 @@ static void vCheckTask( void *pvParameters )
 	}
 }
 
+static void vTransmitTask(void *pvParameters)
+{
+	while (1) {
+		
+		if (xEventGroupWaitBits(
+			xDataEventGroup,
+			DATA_EVENT_GROUP_BH1750_Msk | DATA_EVENT_GROUP_MPU6050_Msk,
+			pdTRUE,
+			pdTRUE,
+			portMAX_DELAY)) {
+					GPIOC->BSRR = 1 << 13;
+				memset((uint8_t *)nRF24_payload, '\0', 32); //Fill all the array space with zeros
+				sprintf((char *)nRF24_payload, "B%.2f", xSensorData.brightness);
+				nRF24_TransmitPacket(nRF24_payload, 32);
+				
+				/*memset((uint8_t *)nRF24_payload, '\0', 32); //Fill all the array space with zeros
+				sprintf((char *)nRF24_payload, "B%.2f %.2f %.2f %.2f", q0, q1, q2, q3);
+				nRF24_TransmitPacket(nRF24_payload, 32);*/
+				
+				memset((uint8_t *)nRF24_payload, '\0', 32); //Fill all the array space with zeros
+				sprintf((char *)nRF24_payload, "X%d %d", (int32_t)(xSensorData.acc[0]*100000.0), (int32_t)(xSensorData.acc[3]*100000.0));
+				nRF24_TransmitPacket(nRF24_payload, 32);
+				
+				memset((uint8_t *)nRF24_payload, '\0', 32); //Fill all the array space with zeros
+				sprintf((char *)nRF24_payload, "Y%d %d", (int32_t)(xSensorData.acc[1]*100000.0), (int32_t)(xSensorData.acc[4]*100000.0));
+				nRF24_TransmitPacket(nRF24_payload, 32);
+
+				memset((uint8_t *)nRF24_payload, '\0', 32); //Fill all the array space with zeros
+				sprintf((char *)nRF24_payload, "Z%d %d", (int32_t)(xSensorData.acc[2]*100000.0), (int32_t)(xSensorData.acc[5]*100000.0));
+				nRF24_TransmitPacket(nRF24_payload, 32);
+				
+				GPIOC->BRR = 1 << 13;				
+	
+	//			vTaskDelay(pdMS_TO_TICKS(100));
+			}
+	}
+}
+
 int main(void)
 {
 
@@ -154,17 +213,19 @@ int main(void)
 	//vCheckTask(0);
 	
 	xI2CSemaphore = xSemaphoreCreateMutex();
+	xDataEventGroup = xEventGroupCreate();
 	
 	//xTaskCreate( vCheckTask, "Check", 100, (void*)1, 2, NULL );
 	//xTaskCreate( vCheckTask, "Check", 100, (void*)2, 2, NULL );
-	xTaskCreate(vBH1750Task, "BH1750", 500, NULL, 4, NULL);
 	xTaskCreate(vMPU6050Task, "MPU6050", 500, NULL, 4, NULL);
+	xTaskCreate(vBH1750Task, "BH1750", 500, NULL, 4, NULL);
 	xTaskCreate(vUARTTask, "UART", 200, NULL, 3, NULL);
-	xTaskCreate(vBlinkyTask, "LEDFade", 100, NULL, 2, NULL);
+	//xTaskCreate(vBlinkyTask, "LEDFade", 100, NULL, 2, NULL);
+	xTaskCreate(vTransmitTask, "Transmit", 500, NULL, 5, NULL);
 	
-	xUARTQueue = xQueueCreate( 15, sizeof( UARTMessage_t * ) );
+	xUARTQueue = xQueueCreate( 45, sizeof( UARTMessage_t * ) );
 	
-	osQueueUARTMessage("Hello world %d from FreeRTOS\r\n", 17);
+	osQueueUARTMessage("Hello world %d from FreeRTOS\r\n", xTaskGetTickCount());
 	
 	vTaskStartScheduler();
 }
@@ -180,12 +241,16 @@ void prvSetupHardware()
 	
 	//LED Pins Init
 	GPIO_InitTypeDef GPIO_InitStructure;
-	RCC->APB2ENR |= RCC_APB2ENR_IOPBEN | RCC_APB2ENR_AFIOEN; //Enabling the clock of C pins.
+	RCC->APB2ENR |= RCC_APB2ENR_IOPBEN | RCC_APB2ENR_IOPCEN | RCC_APB2ENR_AFIOEN; //Enabling the clock of C pins.
 	GPIOB->CRH |= GPIO_CRH_MODE8|GPIO_CRH_MODE9; //Resetting the bits of the register besides the last 4.
 	GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_8 | GPIO_Pin_9;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_Init(GPIOB, &GPIO_InitStructure);
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
+	GPIO_Init(GPIOC, &GPIO_InitStructure);
   GPIO_PinRemapConfig(GPIO_FullRemap_TIM3, ENABLE);	
 	
 	
@@ -233,14 +298,19 @@ void prvSetupHardware()
 	Delay_Init();
 	UART_Init(115200); //Initialize the UART with the set baud rate
 		
+		
 	MPU6050_I2C_Init(); //Initialize I2C
+
 	MPU6050_Initialize(); //Initialize the MPU6050
 	MPU6050_GyroCalib(gyrCal); //Get the gyroscope calibration values
 	MPU6050_SetFullScaleGyroRange(MPU6050_GYRO_FS_2000); //Set the gyroscope scale to full scale
 	MPU6050_SetFullScaleAccelRange(MPU6050_ACCEL_FS_2); //Set the accelerometer scale
+
 	
 	BH1750_Init(BH1750_CONTHRES); //I2C is already initialized above
-			/*
+	
+	
+
 	nRF24_GPIO_Init(); //Start the pins used by the NRF24
 	nRF24_Init(); //Initialize the nRF24L01 to its default state
 	
@@ -255,7 +325,7 @@ void prvSetupHardware()
 	}
 	else
 	{UART_SendStr("OK\r\n");}
-	
+
 	// This is simple transmitter with Enhanced ShockBurst (to one logic address):
 	//   - TX address: 'ESB'
 	//   - payload: 10 bytes
@@ -284,7 +354,6 @@ void prvSetupHardware()
 	nRF24_SetOperationalMode(nRF24_MODE_TX); //Set operational mode (PTX == transmitter)
 	nRF24_ClearIRQFlags(); //Clear any pending IRQ flags
 	nRF24_SetPowerMode(nRF24_PWR_UP); //Wake the transceiver
-	*/
 }
 
 
