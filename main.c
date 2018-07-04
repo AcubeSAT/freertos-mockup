@@ -18,6 +18,8 @@
 
 #define SAT_Acq_Period_ms 7 // The acquisition period of the satellite
 #define SAT_Serial_Debug 1 // Whether to send debug data serially
+#define SAT_Enable_NRF24 0 // Whether to enable NRF24L01+
+#define SAT_Enable_Sensors 0
 
 float gyrCal[3]; //Save the calibration values
 
@@ -162,7 +164,8 @@ static void vCheckTask( void *pvParameters )
 		UART_SendStr("SystemGood ");
 		UART_SendInt(value);
 		UART_SendStr("\r\n");
-		taskYIELD();
+		//taskYIELD();
+		vTaskDelay(pdMS_TO_TICKS(1000));
 	}
 }
 
@@ -215,13 +218,17 @@ int main(void)
 	xI2CSemaphore = xSemaphoreCreateMutex();
 	xDataEventGroup = xEventGroupCreate();
 	
-	//xTaskCreate( vCheckTask, "Check", 100, (void*)1, 2, NULL );
-	//xTaskCreate( vCheckTask, "Check", 100, (void*)2, 2, NULL );
-	xTaskCreate(vMPU6050Task, "MPU6050", 500, NULL, 4, NULL);
-	xTaskCreate(vBH1750Task, "BH1750", 500, NULL, 4, NULL);
+	xTaskCreate( vCheckTask, "Check", 100, (void*)1, 2, NULL );
+	xTaskCreate( vCheckTask, "Check", 100, (void*)2, 2, NULL );
+	if (SAT_Enable_Sensors) {
+		xTaskCreate(vMPU6050Task, "MPU6050", 500, NULL, 4, NULL);
+		xTaskCreate(vBH1750Task, "BH1750", 500, NULL, 4, NULL);
+	}
 	xTaskCreate(vUARTTask, "UART", 200, NULL, 3, NULL);
 	//xTaskCreate(vBlinkyTask, "LEDFade", 100, NULL, 2, NULL);
-	xTaskCreate(vTransmitTask, "Transmit", 500, NULL, 5, NULL);
+	if (SAT_Enable_NRF24) {
+		xTaskCreate(vTransmitTask, "Transmit", 500, NULL, 5, NULL);
+	}
 	
 	xUARTQueue = xQueueCreate( 45, sizeof( UARTMessage_t * ) );
 	
@@ -298,62 +305,62 @@ void prvSetupHardware()
 	Delay_Init();
 	UART_Init(115200); //Initialize the UART with the set baud rate
 		
+	if (SAT_Enable_Sensors) {
+		MPU6050_I2C_Init(); //Initialize I2C
+
+		MPU6050_Initialize(); //Initialize the MPU6050
+		MPU6050_GyroCalib(gyrCal); //Get the gyroscope calibration values
+		MPU6050_SetFullScaleGyroRange(MPU6050_GYRO_FS_2000); //Set the gyroscope scale to full scale
+		MPU6050_SetFullScaleAccelRange(MPU6050_ACCEL_FS_2); //Set the accelerometer scale
 		
-	MPU6050_I2C_Init(); //Initialize I2C
-
-	MPU6050_Initialize(); //Initialize the MPU6050
-	MPU6050_GyroCalib(gyrCal); //Get the gyroscope calibration values
-	MPU6050_SetFullScaleGyroRange(MPU6050_GYRO_FS_2000); //Set the gyroscope scale to full scale
-	MPU6050_SetFullScaleAccelRange(MPU6050_ACCEL_FS_2); //Set the accelerometer scale
-
-	
-	BH1750_Init(BH1750_CONTHRES); //I2C is already initialized above
-	
-	
-
-	nRF24_GPIO_Init(); //Start the pins used by the NRF24
-	nRF24_Init(); //Initialize the nRF24L01 to its default state
-	
-	nRF24_CE_L(); //RX/TX disabled
-
-	//A small check for debugging
-	UART_SendStr("nRF24L01+ check: ");
-	if (!nRF24_Check()) 
-	{
-		UART_SendStr("FAIL\r\n");
-		while (1);
+		BH1750_Init(BH1750_CONTHRES); //I2C is already initialized above
 	}
-	else
-	{UART_SendStr("OK\r\n");}
-
-	// This is simple transmitter with Enhanced ShockBurst (to one logic address):
-	//   - TX address: 'ESB'
-	//   - payload: 10 bytes
-	//   - RF channel: 40 (2440MHz)
-	//   - data rate: 2Mbps
-	//   - CRC scheme: 2 byte
-	nRF24_SetRFChannel(99); //Set RF channel
-	nRF24_SetDataRate(nRF24_DR_2Mbps); //Set data rate
-	nRF24_SetCRCScheme(nRF24_CRC_2byte); //Set CRC scheme
-	nRF24_SetAddrWidth(5); //Set address width, its common for all pipes (RX and TX)
-
-	//Configure TX PIPE
-	static const uint8_t nRF24_ADDR_Tx[] = { 'B', 'a', 's', 'e', 'S' }; //Address of the receiving end
-	static const uint8_t nRF24_ADDR_Rx[] = { 'C', 'u', 'b', 'e', 'S' }; //Address of the current module
-	nRF24_SetAddr(nRF24_PIPETX, nRF24_ADDR_Tx); //Program TX address
-	nRF24_SetAddr(nRF24_PIPE0, nRF24_ADDR_Tx); //Program address for pipe#0, must be same as TX (for Auto-ACK)
 	
-	//Configure RX PIPE
-	nRF24_SetAddr(nRF24_PIPE1, nRF24_ADDR_Rx); //Program address for pipe
-	nRF24_SetRXPipe(nRF24_PIPE1, nRF24_AA_ON, 32); // Auto-ACK: enabled, payload length: 32 bytes
+	if (SAT_Enable_NRF24) {
+		nRF24_GPIO_Init(); //Start the pins used by the NRF24
+		nRF24_Init(); //Initialize the nRF24L01 to its default state
+		
+		nRF24_CE_L(); //RX/TX disabled
 
-	nRF24_SetTXPower(nRF24_TXPWR_0dBm);	//Set TX power (maximum)
-	nRF24_SetAutoRetr(nRF24_ARD_2500us, 10); //Configure auto retransmit: 10 retransmissions with pause of 2500s in between
-	nRF24_EnableAA(nRF24_PIPE0); //Enable Auto-ACK for pipe#0 (for ACK packets)
-	
-	nRF24_SetOperationalMode(nRF24_MODE_TX); //Set operational mode (PTX == transmitter)
-	nRF24_ClearIRQFlags(); //Clear any pending IRQ flags
-	nRF24_SetPowerMode(nRF24_PWR_UP); //Wake the transceiver
+		//A small check for debugging
+		UART_SendStr("nRF24L01+ check: ");
+		if (!nRF24_Check()) 
+		{
+			UART_SendStr("FAIL\r\n");
+			while (1);
+		}
+		else
+		{UART_SendStr("OK\r\n");}
+
+		// This is simple transmitter with Enhanced ShockBurst (to one logic address):
+		//   - TX address: 'ESB'
+		//   - payload: 10 bytes
+		//   - RF channel: 40 (2440MHz)
+		//   - data rate: 2Mbps
+		//   - CRC scheme: 2 byte
+		nRF24_SetRFChannel(99); //Set RF channel
+		nRF24_SetDataRate(nRF24_DR_2Mbps); //Set data rate
+		nRF24_SetCRCScheme(nRF24_CRC_2byte); //Set CRC scheme
+		nRF24_SetAddrWidth(5); //Set address width, its common for all pipes (RX and TX)
+
+		//Configure TX PIPE
+		static const uint8_t nRF24_ADDR_Tx[] = { 'B', 'a', 's', 'e', 'S' }; //Address of the receiving end
+		static const uint8_t nRF24_ADDR_Rx[] = { 'C', 'u', 'b', 'e', 'S' }; //Address of the current module
+		nRF24_SetAddr(nRF24_PIPETX, nRF24_ADDR_Tx); //Program TX address
+		nRF24_SetAddr(nRF24_PIPE0, nRF24_ADDR_Tx); //Program address for pipe#0, must be same as TX (for Auto-ACK)
+		
+		//Configure RX PIPE
+		nRF24_SetAddr(nRF24_PIPE1, nRF24_ADDR_Rx); //Program address for pipe
+		nRF24_SetRXPipe(nRF24_PIPE1, nRF24_AA_ON, 32); // Auto-ACK: enabled, payload length: 32 bytes
+
+		nRF24_SetTXPower(nRF24_TXPWR_0dBm);	//Set TX power (maximum)
+		nRF24_SetAutoRetr(nRF24_ARD_2500us, 10); //Configure auto retransmit: 10 retransmissions with pause of 2500s in between
+		nRF24_EnableAA(nRF24_PIPE0); //Enable Auto-ACK for pipe#0 (for ACK packets)
+		
+		nRF24_SetOperationalMode(nRF24_MODE_TX); //Set operational mode (PTX == transmitter)
+		nRF24_ClearIRQFlags(); //Clear any pending IRQ flags
+		nRF24_SetPowerMode(nRF24_PWR_UP); //Wake the transceiver
+	}
 }
 
 
