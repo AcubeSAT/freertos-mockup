@@ -9,8 +9,8 @@
 
 
 // Peripheral libraries
-#include <stm32f10x_gpio.h>
-#include <stm32f10x.h>
+#include <stm32f1xx.h>
+#include <stm32f1xx_hal_gpio.h>
 #include "SPI.h"
 //#include <stm32f10x_spi.h>
 
@@ -23,20 +23,20 @@
 
 // CE (chip enable) pin (PB11)
 #define nRF24_CE_PORT              GPIOA
-#define nRF24_CE_PIN               GPIO_Pin_3
-#define nRF24_CE_L()               GPIO_ResetBits(nRF24_CE_PORT, nRF24_CE_PIN)
-#define nRF24_CE_H()               GPIO_SetBits(nRF24_CE_PORT, nRF24_CE_PIN)
+#define nRF24_CE_PIN               GPIO_PIN_3
+#define nRF24_CE_L()               HAL_GPIO_WritePin(nRF24_CE_PORT, nRF24_CE_PIN, GPIO_PIN_RESET)
+#define nRF24_CE_H()               HAL_GPIO_WritePin(nRF24_CE_PORT, nRF24_CE_PIN, GPIO_PIN_SET)
 
 // CSN (chip select negative) pin (PB12)
 #define nRF24_CSN_PORT             GPIOA
-#define nRF24_CSN_PIN              GPIO_Pin_4
-#define nRF24_CSN_L()              GPIO_ResetBits(nRF24_CSN_PORT, nRF24_CSN_PIN)
-#define nRF24_CSN_H()              GPIO_SetBits(nRF24_CSN_PORT, nRF24_CSN_PIN)
+#define nRF24_CSN_PIN              GPIO_PIN_4
+#define nRF24_CSN_L()              HAL_GPIO_WritePin(nRF24_CE_PORT, nRF24_CE_PIN, GPIO_PIN_RESET)
+#define nRF24_CSN_H()              HAL_GPIO_WritePin(nRF24_CE_PORT, nRF24_CE_PIN, GPIO_PIN_SET)
 
 
 // IRQ pin (PB10)
 #define nRF24_IRQ_PORT             GPIOA
-#define nRF24_IRQ_PIN              GPIO_Pin_2
+#define nRF24_IRQ_PIN              GPIO_PIN_2
 
 
 // Function prototypes

@@ -2,7 +2,7 @@
 #define __DELAY_H
 
 
-#include "stm32f10x.h"
+#include "stm32f1xx.h"
 
 
 // Set to "1" to use the inlined Delay_ms() function

@@ -1,49 +1,54 @@
 #include "uart.h"
+#include "stm32f1xx_hal_uart.h"
+#include "stm32f1xx_ll_usart.h"
 
 
 void UART_Init(uint32_t baudrate) {
-	GPIO_InitTypeDef PORT;
+	GPIO_InitTypeDef GPIO;
 
 	// U(S)ART init
 #if _UART_PORT == 1
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA | RCC_APB2Periph_USART1,ENABLE);
+	__HAL_RCC_GPIOA_CLK_ENABLE();
+	__HAL_RCC_USART1_CLK_ENABLE();
 #elif _UART_PORT == 2
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA,ENABLE);
-	RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2,ENABLE);
+	__HAL_RCC_GPIOA_CLK_ENABLE();
+	__HAL_RCC_USART2_CLK_ENABLE();
 #elif _UART_PORT == 3
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB,ENABLE);
-	RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART3,ENABLE);
+	__HAL_RCC_GPIOB_CLK_ENABLE();
+	__HAL_RCC_USART3_CLK_ENABLE();
 #elif _UART_PORT == 4
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC,ENABLE);
-	RCC_APB1PeriphClockCmd(RCC_APB1Periph_UART4,ENABLE);
+	__HAL_RCC_GPIOC_CLK_ENABLE();
+	__HAL_RCC_UART4_CLK_ENABLE();
 #elif _UART_PORT == 5
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC | RCC_APB2Periph_GPIOD,ENABLE);
-	RCC_APB1PeriphClockCmd(RCC_APB1Periph_UART5,ENABLE);
+	__HAL_RCC_GPIOC_CLK_ENABLE();
+	__HAL_RCC_GPIOD_CLK_ENABLE();
+	__HAL_RCC_UART5_CLK_ENABLE();
 #endif
 
-	PORT.GPIO_Pin = UART_TX_PIN;
-	PORT.GPIO_Speed = GPIO_Speed_50MHz;
-	PORT.GPIO_Mode = GPIO_Mode_AF_PP; // TX as AF with Push-Pull
-	GPIO_Init(UART_GPIO_PORT_TX,&PORT);
-	PORT.GPIO_Pin = UART_RX_PIN;
-	PORT.GPIO_Speed = GPIO_Speed_50MHz;
-	PORT.GPIO_Mode = GPIO_Mode_IN_FLOATING; // RX as in without pull-up
-	GPIO_Init(UART_GPIO_PORT_RX,&PORT);
+	GPIO.Pin = UART_TX_PIN;
+	GPIO.Speed = GPIO_SPEED_FREQ_HIGH;
+	GPIO.Mode = GPIO_MODE_AF_PP; // TX as AF with Push-Pull
+	HAL_GPIO_Init(UART_GPIO_PORT_TX, &GPIO);
 
-	USART_InitTypeDef UART;
-	UART.USART_BaudRate = baudrate;
-	UART.USART_HardwareFlowControl = USART_HardwareFlowControl_None; // No flow control
-	UART.USART_Mode = USART_Mode_Rx | USART_Mode_Tx; // RX+TX mode
-	UART.USART_WordLength = USART_WordLength_8b; // 8-bit frame
-	UART.USART_Parity = USART_Parity_No; // No parity check
-	UART.USART_StopBits = USART_StopBits_1; // 1 stop bit
-	USART_Init(UART_PORT,&UART);
-	USART_Cmd(UART_PORT,ENABLE);
+	GPIO.Pin = UART_RX_PIN;
+	GPIO.Speed = GPIO_SPEED_FREQ_HIGH;
+	GPIO.Mode = GPIO_MODE_INPUT; // RX as in without pull-up
+	HAL_GPIO_Init(UART_GPIO_PORT_RX, &GPIO);
+
+	UART_HandleTypeDef UART;
+	UART.Instance = UART_PORT;
+	UART.Init.BaudRate = baudrate;
+	UART.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+	UART.Init.Mode = UART_MODE_TX_RX;
+	UART.Init.WordLength = UART_WORDLENGTH_8B;
+	UART.Init.Parity = UART_PARITY_NONE;
+	UART.Init.StopBits = UART_STOPBITS_1;
+	HAL_UART_Init(&UART);
 }
 
 void UART_SendChar(char ch) {
-	while (!USART_GetFlagStatus(UART_PORT,USART_FLAG_TC)); // wait for "Transmission Complete" flag cleared
-	USART_SendData(UART_PORT,ch);
+	while (!LL_USART_IsActiveFlag_TC(UART_PORT)); // wait for "Transmission Complete" flag cleared
+	LL_USART_TransmitData8(UART_PORT, ch);
 }
 
 void UART_SendInt(int32_t num) {

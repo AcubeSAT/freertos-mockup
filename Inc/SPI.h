@@ -1,7 +1,7 @@
 #ifndef SPI_H_INCLUDED
 #define SPI_H_INCLUDED
 
-#include <stm32f10x.h>
+#include <stm32f1xx.h>
 
 #define MSB_FIRST 0 //Send the MSB first
 #define LSB_FIRST 1 //Send the LSB first

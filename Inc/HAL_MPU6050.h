@@ -36,19 +36,24 @@ extern "C" {
 #endif
 
 /* Includes */
-#include "stm32f10x.h"
+#include "stm32f1xx.h"
+
+typedef uint8_t  u8;
+typedef uint16_t u16;
+typedef int16_t  s16;
 
 /**
  * @addtogroup  MPU6050_I2C_Define
  * @{
  */
 
+// TODO: Use a better way to enable RCC peripheral clocks
 #define MPU6050_I2C                  I2C1
-#define MPU6050_I2C_RCC_Periph       RCC_APB1Periph_I2C1
+#define MPU6050_I2C_RCC_Periph       __HAL_RCC_I2C1_CLK_ENABLE
 #define MPU6050_I2C_Port             GPIOB
-#define MPU6050_I2C_SCL_Pin          GPIO_Pin_6
-#define MPU6050_I2C_SDA_Pin          GPIO_Pin_7
-#define MPU6050_I2C_RCC_Port         RCC_APB2Periph_GPIOB
+#define MPU6050_I2C_SCL_Pin          GPIO_PIN_6
+#define MPU6050_I2C_SDA_Pin          GPIO_PIN_7
+#define MPU6050_I2C_RCC_Port         __HAL_RCC_GPIOB_CLK_ENABLE
 #define MPU6050_I2C_Speed            100000 // 100kHz standard mode
 
 /**

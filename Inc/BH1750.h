@@ -11,7 +11,7 @@
 #ifndef BH1750_H_
 #define BH1750_H_
 
-#include "stm32f10x.h"
+#include "stm32f1xx.h"
 #include "delay.h"
 #include "TWI.h"
 

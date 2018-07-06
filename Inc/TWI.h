@@ -1,7 +1,7 @@
 #ifndef TWI_H_
 #define TWI_H_
 
-#include <stm32f10x.h>
+#include <stm32f1xx.h>
 
 extern void TWIInit(void); //Initialize the I2C interface
 extern void TWIStart(void); //Send a start signal
