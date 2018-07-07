@@ -40,6 +40,8 @@
  * See http://www.freertos.org/a00110.html.
  *----------------------------------------------------------*/
 
+#define SAT_Enable_FreeRTOS_Trace 	1 // Whether to enable trace data for Atollic task runtime stats (http://blog.atollic.com/visualizing-run-time-statistics-using-freertos)
+
 #define configUSE_PREEMPTION		1
 #define configUSE_IDLE_HOOK			0
 #define configUSE_TICK_HOOK			0
@@ -49,7 +51,6 @@
 #define configMINIMAL_STACK_SIZE	( ( unsigned short ) 128 )
 #define configTOTAL_HEAP_SIZE		( ( size_t ) ( 17 * 1024 ) )
 #define configMAX_TASK_NAME_LEN		( 16 )
-#define configUSE_TRACE_FACILITY	0
 #define configUSE_16_BIT_TICKS		0
 #define configIDLE_SHOULD_YIELD		1
 
@@ -89,6 +90,17 @@ NVIC value of 255. */
 #define configLIBRARY_KERNEL_INTERRUPT_PRIORITY	15
 
 #define configASSERT( x )     if( ( x ) == 0 ) { UART_SendStr("FATAL ERROR (assertion - run debugger)\r\n"); for( ;; ); }
+
+// Tracing/debugging utilities
+#if (SAT_Enable_FreeRTOS_Trace == 1)
+extern volatile unsigned long ulHighFrequencyTimerTicks;
+#define configUSE_TRACE_FACILITY                   1
+#define configGENERATE_RUN_TIME_STATS              1
+#define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS()
+#define portGET_RUN_TIME_COUNTER_VALUE()           ulHighFrequencyTimerTicks
+#else
+#define configUSE_TRACE_FACILITY	0
+#endif
 
 #endif /* FREERTOS_CONFIG_H */
 

@@ -10,17 +10,19 @@
 #include "nrf24.h"
 #include "MPU6050.h"
 #include "BH1750.h"
+#include "stm32f1xx_ll_tim.h"
+
+#define SAT_Acq_Period_ms 			7 // The acquisition period of the satellite
+
+#define SAT_Serial_Debug 			1 // Whether to send debug data serially (for every data reception)
+#define SAT_Enable_NRF24 			0 // Whether to enable NRF24L01+
+#define SAT_Enable_Sensors 			0 // Whether to enable I2C sensors
 
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
 #include "semphr.h"
 #include "event_groups.h"
-
-#define SAT_Acq_Period_ms 7 // The acquisition period of the satellite
-#define SAT_Serial_Debug 1 // Whether to send debug data serially
-#define SAT_Enable_NRF24 0 // Whether to enable NRF24L01+
-#define SAT_Enable_Sensors 0
 
 float gyrCal[3]; //Save the calibration values
 
@@ -45,6 +47,8 @@ EventGroupHandle_t xDataEventGroup; // Event group for reception of data from se
 #define DATA_EVENT_GROUP_MPU6050_Msk (1 << 1)
 
 void prvSetupHardware();
+
+volatile unsigned long ulHighFrequencyTimerTicks;
 
 void osQueueUARTMessage(const char * format, ...) {
 	// TODO: Less copying around bits
@@ -369,5 +373,34 @@ void prvSetupHardware() {
 		nRF24_ClearIRQFlags(); //Clear any pending IRQ flags
 		nRF24_SetPowerMode(nRF24_PWR_UP); //Wake the transceiver
 	}
+
+	if (SAT_Enable_FreeRTOS_Trace) {
+		// Set interrupt priority and enable TIMER1 interrupt in NVIC
+		HAL_NVIC_SetPriority(TIM1_UP_IRQn, 0, 0);
+		HAL_NVIC_EnableIRQ(TIM1_UP_IRQn);
+
+		// Clock the TIMER1 peripheral
+		__HAL_RCC_TIM1_CLK_ENABLE();
+
+		TIM_HandleTypeDef tim; // Timer handle
+		tim.Instance = TIM1;
+		tim.Init.Period = 1800;
+		tim.Init.Prescaler = 1;
+		tim.Init.CounterMode = TIM_COUNTERMODE_UP;
+		HAL_TIM_Base_Init(&tim);
+		HAL_TIM_Base_Start_IT(&tim);
+
+		ulHighFrequencyTimerTicks = 0;
+	}
+}
+
+void TIM1_UP_IRQHandler(void)
+{
+    /* Clear the pending bit in NVIC and TIMER1 */
+	HAL_NVIC_ClearPendingIRQ(TIM1_UP_IRQn);
+	LL_TIM_ClearFlag_UPDATE(TIM1);
+
+    /* Increment the counter used to measure execution time */
+    ulHighFrequencyTimerTicks++;
 }
 
