@@ -393,8 +393,9 @@ PRIVILEGED_DATA static volatile UBaseType_t uxSchedulerSuspended	= ( UBaseType_t
 #if ( configGENERATE_RUN_TIME_STATS == 1 )
 
 	PRIVILEGED_DATA static uint32_t ulTaskSwitchedInTime = 0UL;	/*< Holds the value of a timer/counter the last time a task was switched in. */
-	PRIVILEGED_DATA static uint32_t ulTotalRunTime = 0UL;		/*< Holds the total amount of execution time as defined by the run time counter clock. */
-
+	PRIVILEGED_DATA static volatile uint32_t ulTotalRunTime = 0UL;		/*< Holds the total amount of execution time as defined by the run time counter clock. */
+	// WARNING: ulTotalRunTime has been user-modified to be *volatile*, so that the IDE can be sure to access it for
+	//          run time statistics, and it is not optimised away by the compiler. TODO: Keep this for every FreeRTOS update.
 #endif
 
 /*lint -restore */
