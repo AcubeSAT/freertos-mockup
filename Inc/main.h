@@ -51,6 +51,9 @@
 #include "stm32f1xx_ll_cortex.h"
 #include "stm32f1xx_ll_rcc.h"
 #include "stm32f1xx_ll_utils.h"
+#include "stm32f1xx_ll_dma.h"
+
+#include "uart.h"
 
 /* USER CODE BEGIN Includes */
 
@@ -66,7 +69,8 @@
 /* #define USE_FULL_ASSERT    1U */
 
 /* USER CODE BEGIN Private defines */
-
+#define LL_UART_DMA_CHAN_TX __LL_DMA_GET_CHANNEL(UART_DMA_CHAN_TX)
+#define LL_DMA_IsActie
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
@@ -75,6 +79,7 @@
 void _Error_Handler(char *, int);
 
 volatile unsigned long ulHighFrequencyTimerTicks;
+DMA_HandleTypeDef dma;
 
 #define Error_Handler() _Error_Handler(__FILE__, __LINE__)
 #ifdef __cplusplus

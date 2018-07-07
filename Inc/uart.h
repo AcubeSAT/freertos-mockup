@@ -10,18 +10,21 @@
 	#define UART_RX_PIN       GPIO_PIN_10   // PA10 (USART1_RX)
 	#define UART_GPIO_PORT_TX GPIOA
 	#define UART_GPIO_PORT_RX UART_GPIO_PORT_TX
+	#define UART_DMA_CHAN_TX  DMA1_Channel4
 #elif _UART_PORT == 2
 	#define UART_PORT         USART2
 	#define UART_TX_PIN       GPIO_PIN_2    // PA2 (USART2_TX)
 	#define UART_RX_PIN       GPIO_PIN_3    // PA3 (USART2_RX)
 	#define UART_GPIO_PORT_TX GPIOA
 	#define UART_GPIO_PORT_RX UART_GPIO_PORT_TX
+	#define UART_DMA_CHAN_TX  DMA1_Channel7
 #elif _UART_PORT == 3
 	#define UART_PORT         USART3
 	#define UART_TX_PIN       GPIO_PIN_10    // PB10 (USART3_TX)
 	#define UART_RX_PIN       GPIO_PIN_11    // PB11 (USART3_RX)
 	#define UART_GPIO_PORT_TX GPIOB
 	#define UART_GPIO_PORT_RX UART_GPIO_PORT_TX
+	#define UART_DMA_CHAN_TX  DMA1_Channel2
 #elif _UART_PORT == 4
 	#define UART_PORT         UART4
 	#define UART_TX_PIN       GPIO_PIN_10    // PC10 (UART4_TX)
