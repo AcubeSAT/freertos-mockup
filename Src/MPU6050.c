@@ -409,7 +409,7 @@ void MPU6050_I2C_Init()
     GPIO.Pin = MPU6050_I2C_SCL_Pin | MPU6050_I2C_SDA_Pin;
     GPIO.Speed = GPIO_SPEED_FREQ_HIGH;
     GPIO.Mode = GPIO_MODE_AF_OD;
-    GPIO_Init(MPU6050_I2C_Port, &GPIO);
+    HAL_GPIO_Init(MPU6050_I2C_Port, &GPIO);
 
     /* I2C configuration */
     i2c.Instance = MPU6050_I2C;
@@ -434,7 +434,8 @@ void MPU6050_I2C_Init()
 void MPU6050_I2C_ByteWrite(u8 slaveAddr, u8* pBuffer, u8 writeAddr)
 {
     // ENTR_CRT_SECTION();
-	HAL_I2C_Master_Transmit(&i2c, slaveAddr, pBuffer, 1, 10000);
+	uint8_t dataToSend[] = { writeAddr, (*pBuffer) }; // Send the register address, and its value
+	HAL_I2C_Master_Transmit(&i2c, slaveAddr, dataToSend, 2, 10000);
     // EXT_CRT_SECTION();
 }
 
@@ -449,7 +450,8 @@ void MPU6050_I2C_ByteWrite(u8 slaveAddr, u8* pBuffer, u8 writeAddr)
 void MPU6050_I2C_BufferRead(u8 slaveAddr, u8* pBuffer, u8 readAddr, u16 NumByteToRead)
 {
     // ENTR_CRT_SECTION();
-	HAL_I2C_Master_Receive(&i2c, slaveAddr, pBuffer, NumByteToRead, 10000);
+	HAL_I2C_Master_Transmit(&i2c, slaveAddr, &readAddr, 1, 10000); // transmit requested register
+	HAL_I2C_Master_Receive(&i2c, slaveAddr, pBuffer, NumByteToRead, 10000); // receive requested bytes
     // EXT_CRT_SECTION();
 }
 /**

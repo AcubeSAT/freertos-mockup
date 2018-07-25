@@ -6,7 +6,6 @@
 #include <math.h>
 #include "uart.h"
 #include "main.h"
-#include "delay.h"
 #include "nrf24.h"
 #include "MPU6050.h"
 #include "BH1750.h"
@@ -14,11 +13,11 @@
 #include "stm32f1xx_ll_dma.h"
 #include "stm32f1xx_ll_usart.h"
 
-#define SAT_Acq_Period_ms 			7 // The acquisition period of the satellite
+#define SAT_Acq_Period_ms 			20 // The acquisition period of the satellite
 
 #define SAT_Serial_Debug 			1 // Whether to send debug data serially (for every data reception)
 #define SAT_Enable_NRF24 			0 // Whether to enable NRF24L01+
-#define SAT_Enable_Sensors 			0 // Whether to enable I2C sensors
+#define SAT_Enable_Sensors 			1 // Whether to enable I2C sensors
 
 #include "FreeRTOS.h"
 #include "task.h"
@@ -29,7 +28,7 @@
 float gyrCal[3]; //Save the calibration values
 
 volatile uint8_t stopRX = 0; //Logic variable to indicate the stopping of the RX
-uint8_t nRF24_payload[32]; //Buffer to store a payload of maximum width	
+uint8_t nRF24_payload[32]; //Buffer to store a payload of maximum width
 
 struct SensorData_t {
 	double brightness;
@@ -104,7 +103,7 @@ static void vUARTTask(void *pvParameters) {
 		if (xQueueReceive(xUARTQueue, &message, portMAX_DELAY)) { // Receive a message from the queue
 			LL_USART_EnableDMAReq_TX(UART_PORT); // Enable DMA in the USART registers
 			LL_DMA_SetDataLength(DMA1, LL_UART_DMA_CHAN_TX, strlen(message)); // Set amount of copied bits for DMA
-			LL_DMA_ConfigAddresses(DMA1, LL_UART_DMA_CHAN_TX, message, &(USART2->DR), LL_DMA_DIRECTION_MEMORY_TO_PERIPH); // Send message from memory to the USART Data Register
+			LL_DMA_ConfigAddresses(DMA1, LL_UART_DMA_CHAN_TX, message, &(UART_PORT->DR), LL_DMA_DIRECTION_MEMORY_TO_PERIPH); // Send message from memory to the USART Data Register
 			LL_DMA_EnableChannel(DMA1, LL_UART_DMA_CHAN_TX); // Enable the DMA transaction
 
 			// Note: The following polling method doesn't make sense, since it wastes the processor speed.
@@ -134,7 +133,7 @@ static void vBH1750Task(void *pvParameters)
 			xSemaphoreGive(xI2CSemaphore);
 			xEventGroupSetBits(xDataEventGroup, DATA_EVENT_GROUP_BH1750_Msk);
 
-			if (SAT_Serial_Debug) osQueueUARTMessage("bright dump %f\r\n", xSensorData.brightness);
+			if (SAT_Serial_Debug) osQueueUARTMessage("bri %f\r\n", xSensorData.brightness);
 		}
 
 		vTaskDelayUntil( &xLastWakeTime, pdMS_TO_TICKS( SAT_Acq_Period_ms ) );
@@ -157,10 +156,13 @@ static void vMPU6050Task(void *pvParameters)
 			xEventGroupSetBits(xDataEventGroup, DATA_EVENT_GROUP_MPU6050_Msk);
 
 			if (SAT_Serial_Debug) {
-				osQueueUARTMessage("acc dump %f %f %f\r\n",
+				osQueueUARTMessage("acc dump %.2f %.2f %.2f %.2f %.2f %.2f\r\n",
 						100 * xSensorData.acc[0],
 						100 * xSensorData.acc[1],
-						100 * xSensorData.acc[2]);
+						100 * xSensorData.acc[2],
+						100 * xSensorData.acc[3],
+						100 * xSensorData.acc[4],
+						100 * xSensorData.acc[5]);
 			}
 		}
 
@@ -222,21 +224,21 @@ static void vTransmitTask(void *pvParameters)
 int main(void) {
 
 	prvSetupHardware();
-	UART_Init(115200);
 	UART_SendStr("CubeSAT booting up...\r\n");
 	//vCheckTask(0);
 
 	xI2CSemaphore = xSemaphoreCreateMutex();
 	xDataEventGroup = xEventGroupCreate();
 
-	xTaskCreate(vCheckTask, "Check", 150, (void*) 1, 2, NULL);
-	xTaskCreate(vCheckTask, "Check", 150, (void*) 2, 2, NULL);
+	xTaskCreate(vCheckTask, "Check", 250, (void*) 1, 2, NULL);
+	xTaskCreate(vCheckTask, "Check", 250, (void*) 2, 2, NULL);
 	if (SAT_Enable_Sensors) {
-//		xTaskCreate(vMPU6050Task, "MPU6050", 500, NULL, 4, NULL);
-//		xTaskCreate(vBH1750Task, "BH1750", 500, NULL, 4, NULL);
+		xTaskCreate(vMPU6050Task, "MPU6050", 400, NULL, 4, NULL);
+		xTaskCreate(vBH1750Task, "BH1750", 400, NULL, 4, NULL);
 	}
-	xTaskCreate(vUARTTask, "UART", 200, NULL, 3, NULL);
-	xTaskCreate(vBlinkyTask, "LEDFade", 100, NULL, 2, NULL);
+
+	xTaskCreate(vUARTTask, "UART", 300, NULL, 3, NULL);
+	xTaskCreate(vBlinkyTask, "LEDFade", 200, NULL, 2, NULL);
 	if (SAT_Enable_NRF24) {
 //		xTaskCreate(vTransmitTask, "Transmit", 500, NULL, 5, NULL);
 	}
@@ -253,7 +255,7 @@ void prvClkConfig() {
 	LL_FLASH_SetLatency(LL_FLASH_LATENCY_2);
 
 	/* Enable HSE oscillator */
-	LL_RCC_HSE_EnableBypass();
+//	LL_RCC_HSE_EnableBypass();
 	LL_RCC_HSE_Enable();
 	while (LL_RCC_HSE_IsReady() != 1) {};
 
@@ -290,6 +292,7 @@ void prvSetupHardware() {
 	char* tokenCh = NULL; //Save the tokenized string
 
 	//LED Pins Init
+	__HAL_RCC_GPIOA_CLK_ENABLE(); // Enable clock of GPIO-A
 	__HAL_RCC_GPIOB_CLK_ENABLE(); // Enable clock of GPIO-B
 	__HAL_RCC_GPIOC_CLK_ENABLE(); // Enable clock of GPIO-C
 	GPIO_InitTypeDef GPIO;
@@ -327,6 +330,7 @@ void prvSetupHardware() {
 //	Delay_Init(); // Don't initialise the delay, prvClkConfig()
 				  // takes care of that for us already
 	UART_Init(115200); //Initialize the UART with the set baud rate
+	UART_SendStr("CubeSAT hardware initialization...\r\n");
 
 	// DMA (Direct Memory Access) initialisation
 	__HAL_RCC_DMA1_CLK_ENABLE();

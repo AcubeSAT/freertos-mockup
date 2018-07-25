@@ -2,7 +2,7 @@
 #include "string.h"
 
 
-#define _UART_PORT 2
+#define _UART_PORT 1
 
 #if _UART_PORT == 1
 	#define UART_PORT         USART1
