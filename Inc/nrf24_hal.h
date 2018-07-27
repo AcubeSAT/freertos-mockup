@@ -30,8 +30,8 @@
 // CSN (chip select negative) pin (PB12)
 #define nRF24_CSN_PORT             GPIOA
 #define nRF24_CSN_PIN              GPIO_PIN_4
-#define nRF24_CSN_L()              HAL_GPIO_WritePin(nRF24_CE_PORT, nRF24_CE_PIN, GPIO_PIN_RESET)
-#define nRF24_CSN_H()              HAL_GPIO_WritePin(nRF24_CE_PORT, nRF24_CE_PIN, GPIO_PIN_SET)
+#define nRF24_CSN_L()              HAL_GPIO_WritePin(nRF24_CSN_PORT, nRF24_CSN_PIN, GPIO_PIN_RESET)
+#define nRF24_CSN_H()              HAL_GPIO_WritePin(nRF24_CSN_PORT, nRF24_CSN_PIN, GPIO_PIN_SET)
 
 
 // IRQ pin (PB10)
