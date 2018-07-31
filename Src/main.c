@@ -12,6 +12,7 @@
 #include "stm32f1xx_ll_tim.h"
 #include "stm32f1xx_ll_dma.h"
 #include "stm32f1xx_ll_usart.h"
+#include "stm32f1xx_ll_exti.h"
 
 #define SAT_Acq_Period_ms 			50 // The acquisition period of the satellite
 
@@ -29,6 +30,8 @@ float gyrCal[3]; //Save the calibration values
 
 volatile uint8_t stopRX = 0; //Logic variable to indicate the stopping of the RX
 uint8_t nRF24_payload[32]; //Buffer to store a payload of maximum width
+
+LL_EXTI_InitTypeDef LL_EXTI_InitStructure;
 
 struct SensorData_t {
 	double brightness;
@@ -192,6 +195,8 @@ static void vTransmitTask(void *pvParameters)
 						pdTRUE,
 						pdTRUE,
 						portMAX_DELAY)) {
+			nRF24_SetOperationalMode(nRF24_MODE_TX); //Set operational mode (PTX == transmitter)
+			nRF24_ClearIRQFlags(); //Clear any pending IRQ flags
 			GPIOC->BSRR = 1 << 13;
 			memset((uint8_t *)nRF24_payload, '\0', 32); //Fill all the array space with zeros
 			sprintf((char *)nRF24_payload, "B%.2f", xSensorData.brightness);
@@ -202,20 +207,56 @@ static void vTransmitTask(void *pvParameters)
 			 nRF24_TransmitPacket(nRF24_payload, 32);*/
 
 			memset((uint8_t *)nRF24_payload, '\0', 32);//Fill all the array space with zeros
-			sprintf((char *)nRF24_payload, "X%d %d", (int32_t)(xSensorData.acc[0]*100000.0), (int32_t)(xSensorData.acc[3]*100000.0));
+			sprintf((char *)nRF24_payload, "X%ld %ld", (int32_t)(xSensorData.acc[0]*100000.0), (int32_t)(xSensorData.acc[3]*100000.0));
 			nRF24_TransmitPacket(nRF24_payload, 32);
 
 			memset((uint8_t *)nRF24_payload, '\0', 32);//Fill all the array space with zeros
-			sprintf((char *)nRF24_payload, "Y%d %d", (int32_t)(xSensorData.acc[1]*100000.0), (int32_t)(xSensorData.acc[4]*100000.0));
+			sprintf((char *)nRF24_payload, "Y%ld %ld", (int32_t)(xSensorData.acc[1]*100000.0), (int32_t)(xSensorData.acc[4]*100000.0));
 			nRF24_TransmitPacket(nRF24_payload, 32);
 
 			memset((uint8_t *)nRF24_payload, '\0', 32);//Fill all the array space with zeros
-			sprintf((char *)nRF24_payload, "Z%d %d", (int32_t)(xSensorData.acc[2]*100000.0), (int32_t)(xSensorData.acc[5]*100000.0));
+			sprintf((char *)nRF24_payload, "Z%ld %ld", (int32_t)(xSensorData.acc[2]*100000.0), (int32_t)(xSensorData.acc[5]*100000.0));
 			nRF24_TransmitPacket(nRF24_payload, 32);
 
 			GPIOC->BRR = 1 << 13;
 
 			//			vTaskDelay(pdMS_TO_TICKS(100));
+		}
+	}
+}
+
+static void vReceiveNRFTask(void *pvParameters)
+{
+	while (1)
+	{
+		if (ulTaskNotifyTake(pdFALSE, portMAX_DELAY))
+		{
+			uint8_t payload_length; //Length of received payload
+			char* tokenCh = NULL; //Save the tokenized string
+
+			nRF24_SetOperationalMode(nRF24_MODE_RX); //Set operational mode (PRX == receiver)
+			nRF24_CE_H();
+			if (nRF24_GetStatus_RXFIFO() != nRF24_STATUS_RXFIFO_EMPTY)
+			{
+				nRF24_ReadPayload(nRF24_payload, &payload_length); //Get the payload from the transceiver
+				nRF24_ClearIRQFlags(); //Clear all pending IRQ flags
+
+				tokenCh = strtok((char*)nRF24_payload, ":");
+				if(strstr(tokenCh, "L1"))
+				{
+					tokenCh = strtok (NULL, ":");
+					if(strstr(tokenCh, "1"))
+					{
+						GPIOB->ODR &= ~GPIO_BSRR_BS8;
+						GPIOB->ODR &= ~GPIO_BSRR_BS9;
+					}
+					else if(strstr(tokenCh, "0"))
+					{
+						GPIOB->ODR |= GPIO_BSRR_BS8;
+						GPIOB->ODR |= GPIO_BSRR_BS9;
+					}
+				}
+			}
 		}
 	}
 }
@@ -241,6 +282,7 @@ int main(void) {
 	xTaskCreate(vBlinkyTask, "LEDFade", 200, NULL, 2, NULL);
 	if (SAT_Enable_NRF24) {
 		xTaskCreate(vTransmitTask, "Transmit", 600, NULL, 5, NULL);
+		xTaskCreate(vReceiveNRFTask, "NRF_RX", 500, NULL, 5, NULL);
 	}
 
 	xUARTQueue = xQueueCreate(45, sizeof(UARTMessage_t *));
@@ -287,9 +329,6 @@ void prvSetupHardware() {
 	// Init interrupts necessary for FreeRTOS
 	HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4);
 	HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);
-
-	uint8_t payload_length; //Length of received payload
-	char* tokenCh = NULL; //Save the tokenized string
 
 	//LED Pins Init
 	__HAL_RCC_GPIOA_CLK_ENABLE(); // Enable clock of GPIO-A
@@ -357,6 +396,7 @@ void prvSetupHardware() {
 	}
 
 	if (SAT_Enable_NRF24) {
+
 		nRF24_GPIO_Init(); //Start the pins used by the NRF24
 		nRF24_Init(); //Initialize the nRF24L01 to its default state
 
@@ -430,5 +470,13 @@ void TIM1_UP_IRQHandler(void)
 
     /* Increment the counter used to measure execution time */
     ulHighFrequencyTimerTicks++;
+}
+
+void NRF24_RX_ISR(void)
+{
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+	vTaskNotifyGiveFromISR(vReceiveNRFTask, &xHigherPriorityTaskWoken);
+	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
