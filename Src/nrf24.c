@@ -73,7 +73,9 @@ static void nRF24_WriteMBReg(uint8_t reg, uint8_t *pBuf, uint8_t count) {
 // note: RX/TX pipe addresses remains untouched
 void nRF24_Init(void) {
 	// Write to registers their initial values
-	nRF24_WriteReg(nRF24_REG_CONFIG, 0x08);
+    //nRF24_WriteReg(nRF24_REG_CONFIG, 0x08); // Interrupts all reflected on pin
+	nRF24_WriteReg(nRF24_REG_CONFIG, 0x38); // Only RX_DR interrupt is reflected on IRQ pin
+    
 	nRF24_WriteReg(nRF24_REG_EN_AA, 0x3F);
 	nRF24_WriteReg(nRF24_REG_EN_RXADDR, 0x03);
 	nRF24_WriteReg(nRF24_REG_SETUP_AW, 0x03);
