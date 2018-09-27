@@ -7,7 +7,7 @@
 #include "uart.h"
 #include "main.h"
 #include "nrf24.h"
-#include "MPU6050.h"
+#include "MPU9250.h"
 #include "BH1750.h"
 #include "stm32f1xx_ll_tim.h"
 #include "stm32f1xx_ll_dma.h"
@@ -33,9 +33,13 @@ uint8_t nRF24_payload[32]; //Buffer to store a payload of maximum width
 
 LL_EXTI_InitTypeDef LL_EXTI_InitStructure;
 
-struct SensorData_t {
+struct SensorData_t
+{
 	double brightness;
-	float acc[6];
+	double acc[3];  // Readings from the accelerometer
+	double gyr[3];  // Readings from the gyroscope
+	float magn[3];  // Readings of the magnetometer
+	float magn_adj[3];  // Magnetometer adjustment values
 } xSensorData;
 
 // TODO: Use dynamic allocation for message strings
@@ -45,16 +49,17 @@ QueueHandle_t xUARTQueue;
 EventGroupHandle_t xDataEventGroup; // Event group for reception of data from sensors
 
 #define DATA_EVENT_GROUP_BH1750_Pos   0
-#define DATA_EVENT_GROUP_MPU6050_Pos  1
+#define DATA_EVENT_GROUP_MPU9250_Pos  1
 
 #define DATA_EVENT_GROUP_BH1750_Msk  (1 << 0)
-#define DATA_EVENT_GROUP_MPU6050_Msk (1 << 1)
+#define DATA_EVENT_GROUP_MPU9250_Msk (1 << 1)
 
 void prvSetupHardware();
 
 volatile unsigned long ulHighFrequencyTimerTicks;
 
-void osQueueUARTMessage(const char * format, ...) {
+void osQueueUARTMessage(const char * format, ...)
+{
 	// TODO: Less copying around bits
 
 	va_list arg;
@@ -68,26 +73,31 @@ void osQueueUARTMessage(const char * format, ...) {
 
 	UARTMessage_t pcUARTMessage = pvPortMalloc(strlen(buffer) + 1);
 
-	if (pcUARTMessage == NULL) {
+	if (pcUARTMessage == NULL)
+	{
 		UART_SendStr("ERROR! Not enough memory to store UART string\r\n");
-	} else {
+	}
+	else
+	{
 		strcpy(pcUARTMessage, buffer);
 
 		// TODO: Show a warning if the queue is full (e.g. replace the last
 		// message in the queue)
-		if (xQueueSend(xUARTQueue, (void* ) (&pcUARTMessage),
-				(TickType_t ) 0) == pdFAIL) {
+		if (xQueueSend(xUARTQueue, (void* ) (&pcUARTMessage), (TickType_t ) 0) == pdFAIL)
+		{
 			// Make sure to deallocate the failed message
 			vPortFree(pcUARTMessage);
 		}
 	}
 }
 
-static void vBlinkyTask(void *pvParameters) {
+static void vBlinkyTask(void *pvParameters)
+{
 	//const float frequency = 0.0007;
 	const float frequency = 0.007;
 
-	while (1) {
+	while (1)
+	{
 		float ticks = xTaskGetTickCount();
 
 		double value1 = 1023 * pow(sin(frequency * ticks) / 2.0 + 0.5, 0.5);
@@ -99,11 +109,15 @@ static void vBlinkyTask(void *pvParameters) {
 		vTaskDelay(pdMS_TO_TICKS(5));
 	}
 }
-static void vUARTTask(void *pvParameters) {
+
+static void vUARTTask(void *pvParameters)
+{
 	UARTMessage_t message;
 
-	while (1) {
-		if (xQueueReceive(xUARTQueue, &message, portMAX_DELAY)) { // Receive a message from the queue
+	while (1)
+	{
+		if (xQueueReceive(xUARTQueue, &message, portMAX_DELAY))
+		{ // Receive a message from the queue
 			LL_USART_EnableDMAReq_TX(UART_PORT); // Enable DMA in the USART registers
 			LL_DMA_SetDataLength(DMA1, LL_UART_DMA_CHAN_TX, strlen(message)); // Set amount of copied bits for DMA
 			LL_DMA_ConfigAddresses(DMA1, LL_UART_DMA_CHAN_TX, message, &(UART_PORT->DR), LL_DMA_DIRECTION_MEMORY_TO_PERIPH); // Send message from memory to the USART Data Register
@@ -127,11 +141,15 @@ static void vBH1750Task(void *pvParameters)
 	// Store the last wake time so that we can delay later
 	TickType_t xLastWakeTime = xTaskGetTickCount();
 
-	while(1) {
-		if (xSemaphoreTake(xI2CSemaphore, pdMS_TO_TICKS(250)) == pdFALSE) {
+	while(1)
+	{
+		if (xSemaphoreTake(xI2CSemaphore, pdMS_TO_TICKS(250)) == pdFALSE)
+		{
 			UART_SendStr("FATAL Error: I2C timeout");
 			vTaskSuspend(NULL); // Stop this task
-		} else {
+		}
+		else
+		{
 			xSensorData.brightness = BH1750_GetBrightnessCont();
 			xSemaphoreGive(xI2CSemaphore);
 			xEventGroupSetBits(xDataEventGroup, DATA_EVENT_GROUP_BH1750_Msk);
@@ -143,29 +161,38 @@ static void vBH1750Task(void *pvParameters)
 	}
 }
 
-static void vMPU6050Task(void *pvParameters)
+static void vMPU9250Task(void *pvParameters)
 {
 	// Store the last wake time so that we can delay later
 	TickType_t xLastWakeTime = xTaskGetTickCount();
 
-	while(1) {
-		if (xSemaphoreTake(xI2CSemaphore, pdMS_TO_TICKS(250)) == pdFALSE) {
+	while(1)
+	{
+		if (xSemaphoreTake(xI2CSemaphore, pdMS_TO_TICKS(250)) == pdFALSE)
+		{
 			UART_SendStr("FATAL Error: I2C timeout");
 			vTaskSuspend(NULL); // Stop this task
-		} else {
-			MPU6050_GetCalibAccelGyro(xSensorData.acc, gyrCal);
+		}
+		else
+		{
+			MPU9250_GetCalibAccelGyro(xSensorData.acc, xSensorData.gyr, gyrCal);
+			AK8963GetMagnuT(xSensorData.magn, xSensorData.magn_adj);
 			xSemaphoreGive(xI2CSemaphore);
 
-			xEventGroupSetBits(xDataEventGroup, DATA_EVENT_GROUP_MPU6050_Msk);
+			xEventGroupSetBits(xDataEventGroup, DATA_EVENT_GROUP_MPU9250_Msk);
 
-			if (SAT_Serial_Debug) {
-				osQueueUARTMessage("acc dump %.2f %.2f %.2f %.2f %.2f %.2f\r\n",
+			if (SAT_Serial_Debug)
+			{
+				osQueueUARTMessage("acc dump %.2f %.2f %.2f %.2f %.2f %.2f\nmag %.2f %.2f %.2f\r\n",
 						100 * xSensorData.acc[0],
 						100 * xSensorData.acc[1],
 						100 * xSensorData.acc[2],
-						100 * xSensorData.acc[3],
-						100 * xSensorData.acc[4],
-						100 * xSensorData.acc[5]);
+						100 * xSensorData.gyr[0],
+						100 * xSensorData.gyr[1],
+						100 * xSensorData.gyr[2],
+						xSensorData.magn[0],
+						xSensorData.magn[1],
+						xSensorData.magn[2]);
 			}
 		}
 
@@ -174,10 +201,12 @@ static void vMPU6050Task(void *pvParameters)
 }
 #endif
 
-static void vCheckTask(void *pvParameters) {
+static void vCheckTask(void *pvParameters)
+{
 	uint8_t value = (uint8_t) pvParameters;
 
-	for (;;) {
+	while(1)
+	{
 		osQueueUARTMessage("%d SystemGood %d \r\n", value, xTaskGetTickCount());
 		//taskYIELD();
 		vTaskDelay(pdMS_TO_TICKS(1000));
@@ -187,14 +216,16 @@ static void vCheckTask(void *pvParameters) {
 #if SAT_Enable_NRF24
 static void vTransmitTask(void *pvParameters)
 {
-	while (1) {
+	while (1)
+	{
 
 		if (xEventGroupWaitBits(
 						xDataEventGroup,
-						DATA_EVENT_GROUP_BH1750_Msk | DATA_EVENT_GROUP_MPU6050_Msk,
+						DATA_EVENT_GROUP_BH1750_Msk | DATA_EVENT_GROUP_MPU9250_Msk,
 						pdTRUE,
 						pdTRUE,
-						portMAX_DELAY)) {
+						portMAX_DELAY))
+		{
 			nRF24_SetOperationalMode(nRF24_MODE_TX); //Set operational mode (PTX == transmitter)
 			nRF24_ClearIRQFlags(); //Clear any pending IRQ flags
 			GPIOC->BSRR = 1 << 13;
@@ -207,15 +238,15 @@ static void vTransmitTask(void *pvParameters)
 			 nRF24_TransmitPacket(nRF24_payload, 32);*/
 
 			memset((uint8_t *)nRF24_payload, '\0', 32);//Fill all the array space with zeros
-			sprintf((char *)nRF24_payload, "X%ld %ld", (int32_t)(xSensorData.acc[0]*100000.0), (int32_t)(xSensorData.acc[3]*100000.0));
+			sprintf((char *)nRF24_payload, "X%ld %ld", (int32_t)(xSensorData.acc[0]*100000.0), (int32_t)(xSensorData.gyr[0]*100000.0));
 			nRF24_TransmitPacket(nRF24_payload, 32);
 
 			memset((uint8_t *)nRF24_payload, '\0', 32);//Fill all the array space with zeros
-			sprintf((char *)nRF24_payload, "Y%ld %ld", (int32_t)(xSensorData.acc[1]*100000.0), (int32_t)(xSensorData.acc[4]*100000.0));
+			sprintf((char *)nRF24_payload, "Y%ld %ld", (int32_t)(xSensorData.acc[1]*100000.0), (int32_t)(xSensorData.gyr[1]*100000.0));
 			nRF24_TransmitPacket(nRF24_payload, 32);
 
 			memset((uint8_t *)nRF24_payload, '\0', 32);//Fill all the array space with zeros
-			sprintf((char *)nRF24_payload, "Z%ld %ld", (int32_t)(xSensorData.acc[2]*100000.0), (int32_t)(xSensorData.acc[5]*100000.0));
+			sprintf((char *)nRF24_payload, "Z%ld %ld", (int32_t)(xSensorData.acc[2]*100000.0), (int32_t)(xSensorData.gyr[2]*100000.0));
 			nRF24_TransmitPacket(nRF24_payload, 32);
 
 			GPIOC->BRR = 1 << 13;
@@ -234,8 +265,10 @@ static void vReceiveNRFTask(void *pvParameters)
 			uint8_t payload_length; //Length of received payload
 			char* tokenCh = NULL; //Save the tokenized string
 
-			nRF24_SetOperationalMode(nRF24_MODE_RX); //Set operational mode (PRX == receiver)
+			//Set operational mode (PRX == receiver)
+			nRF24_SetOperationalMode(nRF24_MODE_RX);
 			nRF24_CE_H();
+
 			if (nRF24_GetStatus_RXFIFO() != nRF24_STATUS_RXFIFO_EMPTY)
 			{
 				nRF24_ReadPayload(nRF24_payload, &payload_length); //Get the payload from the transceiver
@@ -244,7 +277,8 @@ static void vReceiveNRFTask(void *pvParameters)
 				tokenCh = strtok((char*)nRF24_payload, ":");
 				if(strstr(tokenCh, "L1"))
 				{
-					tokenCh = strtok (NULL, ":");
+					// TODO: Provide true functionality on the reception, like sending a message
+					tokenCh = strtok (NULL, ":"); // Tokenize the string
 					if(strstr(tokenCh, "1"))
 					{
 						GPIOB->ODR &= ~GPIO_BSRR_BS8;
@@ -262,7 +296,8 @@ static void vReceiveNRFTask(void *pvParameters)
 }
 #endif
 
-int main(void) {
+int main(void)
+{
 
 	prvSetupHardware();
 	UART_SendStr("CubeSAT booting up...\r\n");
@@ -273,14 +308,17 @@ int main(void) {
 
 	xTaskCreate(vCheckTask, "Check", 250, (void*) 1, 2, NULL);
 	xTaskCreate(vCheckTask, "Check", 250, (void*) 2, 2, NULL);
-	if (SAT_Enable_Sensors) {
-		xTaskCreate(vMPU6050Task, "MPU6050", 400, NULL, 4, NULL);
+	if (SAT_Enable_Sensors)
+	{
+		xTaskCreate(vMPU9250Task, "MPU9250", 400, NULL, 4, NULL);
 		xTaskCreate(vBH1750Task, "BH1750", 400, NULL, 4, NULL);
 	}
 
 	xTaskCreate(vUARTTask, "UART", 300, NULL, 3, NULL);
 	xTaskCreate(vBlinkyTask, "LEDFade", 200, NULL, 2, NULL);
-	if (SAT_Enable_NRF24) {
+
+	if (SAT_Enable_NRF24)
+	{
 		xTaskCreate(vTransmitTask, "Transmit", 600, NULL, 5, NULL);
 		xTaskCreate(vReceiveNRFTask, "NRF_RX", 600, NULL, 5, NULL);
 	}
@@ -339,6 +377,7 @@ void prvSetupHardware()
 
     NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4);
     
+    /***** NRF24 Interrupt pin init *****/
     // Initialize the interrupt pin
     LL_GPIO_AF_SetEXTISource(LL_GPIO_AF_EXTI_PORTA, LL_GPIO_AF_EXTI_LINE2);
 
@@ -351,6 +390,7 @@ void prvSetupHardware()
 
     LL_GPIO_SetPinPull(GPIOA, LL_GPIO_PIN_2, LL_GPIO_PULL_UP);
     LL_GPIO_SetPinMode(GPIOA, LL_GPIO_PIN_2, LL_GPIO_MODE_INPUT);
+    /***** NRF24 Interrupt pin init *****/
 
 	//LED Pins Init
 	__HAL_RCC_GPIOA_CLK_ENABLE(); // Enable clock of GPIO-A
@@ -406,18 +446,21 @@ void prvSetupHardware()
 	HAL_DMA_Init(&dma);
 //	__HAL_LINKDMA(huart,hdmatx,dma);
 
-	if (SAT_Enable_Sensors) {
-		MPU6050_I2C_Init(); //Initialize I2C
+	if (SAT_Enable_Sensors)
+	{
+		TWIInit(); //Initialize I2C
 
-		MPU6050_Initialize(); //Initialize the MPU6050
-		MPU6050_GyroCalib(gyrCal); //Get the gyroscope calibration values
-		MPU6050_SetFullScaleGyroRange(MPU6050_GYRO_FS_2000); //Set the gyroscope scale to full scale
-		MPU6050_SetFullScaleAccelRange(MPU6050_ACCEL_FS_2); //Set the accelerometer scale
+		MPU9250Init(AFS_2G, GFS_500DPS); //Initialize the MPU9250
+		MPU9250Calibration(gyrCal); //Get the gyroscope calibration values
+		MPU9250_SetFullScaleGyroRange(GFS_2000DPS); //Set the gyroscope scale to full scale
+
+		AK8963Init(AK8963_16BIT, AK8963_CONT100HZ, xSensorData.magn_adj);
 
 		BH1750_Init(BH1750_CONTHRES); //I2C is already initialized above
 	}
 
-	if (SAT_Enable_NRF24) {
+	if (SAT_Enable_NRF24)
+	{
 
 		nRF24_GPIO_Init(); //Start the pins used by the NRF24
 		nRF24_Init(); //Initialize the nRF24L01 to its default state
@@ -426,18 +469,20 @@ void prvSetupHardware()
 
 		//A small check for debugging
 		UART_SendStr("nRF24L01+ check: ");
-		if (!nRF24_Check()) {
+		if (!nRF24_Check())
+		{
 			UART_SendStr("FAIL\r\n");
-			while (1)
-				;
-		} else {
+			while (1);
+		}
+		else
+		{
 			UART_SendStr("OK\r\n");
 		}
 
 		// This is simple transmitter with Enhanced ShockBurst (to one logic address):
-		//   - TX address: 'ESB'
-		//   - payload: 10 bytes
-		//   - RF channel: 40 (2440MHz)
+		//   - TX address: 'BaseS'
+		//   - Payload: 32 bytes
+		//   - RF channel: 99 (2499MHz)
 		//   - data rate: 2Mbps
 		//   - CRC scheme: 2 byte
 		nRF24_SetRFChannel(99); //Set RF channel
@@ -464,7 +509,8 @@ void prvSetupHardware()
 		nRF24_SetPowerMode(nRF24_PWR_UP); //Wake the transceiver
 	}
 
-	if (SAT_Enable_FreeRTOS_Trace) {
+	if (SAT_Enable_FreeRTOS_Trace)
+	{
 		// Set interrupt priority and enable TIMER1 interrupt in NVIC
 		HAL_NVIC_SetPriority(TIM1_UP_IRQn, 0, 0);
 		HAL_NVIC_EnableIRQ(TIM1_UP_IRQn);
@@ -498,6 +544,7 @@ void NRF24_RX_ISR(void)
 {
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
+	// Send a notification to FREERTOS for the task to take priority
 	vTaskNotifyGiveFromISR(vReceiveNRFTask, &xHigherPriorityTaskWoken);
 	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
