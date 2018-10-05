@@ -47,6 +47,8 @@ TaskHandle_t xReceiveTask;
 
 // LED blinking flags
 uint8_t blinkingEnabled = 1;
+uint8_t blinkingFadingOut = 0;
+uint8_t blinkingFadingIn = 0;
 
 #define DATA_EVENT_GROUP_BH1750_Pos   0
 #define DATA_EVENT_GROUP_MPU6050_Pos  1
@@ -88,20 +90,49 @@ void osQueueUARTMessage(const char * format, ...) {
 }
 
 static void vBlinkyTask(void *pvParameters) {
-	const float frequency = 0.007;
+	const float frequency = 0.0007;
 
-//	if /()
+	uint8_t blinkingActive = blinkingEnabled;
 
-	double value1, value2;
+	uint32_t ticksDelta = 0;
+
+	double value1 = 0, value2 = 0;
 
 	while (1) {
-		float ticks = xTaskGetTickCount();
+		float ticks = xTaskGetTickCount() - ticksDelta;
 
-		if (blinkingEnabled) {
+		// Only spend time blinking when blinking is enabled
+		if (blinkingFadingOut) {
+			value1 = 1023 - (1023 - value1) / 1.07;
+			value2 = 1023 - (1023 - value2) / 1.07;
+
+			if (value1 >= 1020 && value2 >= 1020) {
+				// Fadeout complete
+				blinkingFadingOut = 0;
+
+				value1 = value2 = 1023;
+
+				// Set LEDS to Hi-Z
+//				LL_GPIO_SetPinMode(GPIOB, LL_GPIO_PIN_8, LL_GPIO_MODE_INPUT);
+//				LL_GPIO_SetPinMode(GPIOB, LL_GPIO_PIN_9, LL_GPIO_MODE_INPUT);
+			}
+		} else if (blinkingFadingIn) {
+//			LL_GPIO_SetPinMode(GPIOB, LL_GPIO_PIN_8, LL_GPIO_MODE_ALTERNATE);
+//			LL_GPIO_SetPinMode(GPIOB, LL_GPIO_PIN_9, LL_GPIO_MODE_ALTERNATE);
+
+			// Fade up
+			value1 = 1023 - (1024 - value1) * 1.04;
+			value2 = 1023 - (1024 - value2) * 1.04;
+
+			if (value1 <= 707 && value2 <= 707) {
+				// Fadein complete
+				blinkingFadingIn = 0;
+				ticksDelta = xTaskGetTickCount();
+				value1 = value2 = 707;
+			}
+		} else if (blinkingEnabled) {
 			value1 = 1023 * pow(sin(frequency * ticks) / 2.0 + 0.5, 0.5);
 			value2 = 1023 * pow(sin(frequency * ticks * 1.1) / 2.0 + 0.5, 0.5);
-		} else {
-			value1 = value2 = 1023;
 		}
 
 		TIM4->CCR3 = (int) value1;
@@ -262,11 +293,13 @@ static void vReceiveNRFTask(void *pvParameters)
 					{
 						osQueueUARTMessage("->>  Received +1 command\r\n");
 						blinkingEnabled = 1;
+						blinkingFadingIn = 1;
 					}
 					else if(strstr(tokenCh, "0"))
 					{
 						osQueueUARTMessage("->>  Received  0 command\r\n");
 						blinkingEnabled = 0;
+						blinkingFadingOut = 1;
 					}
 					else
 					{
