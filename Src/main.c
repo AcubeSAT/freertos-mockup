@@ -45,6 +45,9 @@ QueueHandle_t xUARTQueue;
 EventGroupHandle_t xDataEventGroup; // Event group for reception of data from sensors
 TaskHandle_t xReceiveTask;
 
+// LED blinking flags
+uint8_t blinkingEnabled = 1;
+
 #define DATA_EVENT_GROUP_BH1750_Pos   0
 #define DATA_EVENT_GROUP_MPU6050_Pos  1
 
@@ -85,14 +88,21 @@ void osQueueUARTMessage(const char * format, ...) {
 }
 
 static void vBlinkyTask(void *pvParameters) {
-	//const float frequency = 0.0007;
 	const float frequency = 0.007;
+
+//	if /()
+
+	double value1, value2;
 
 	while (1) {
 		float ticks = xTaskGetTickCount();
 
-		double value1 = 1023 * pow(sin(frequency * ticks) / 2.0 + 0.5, 0.5);
-		double value2 = 1023 * pow(sin(frequency * ticks * 1.1) / 2.0 + 0.5, 0.5);
+		if (blinkingEnabled) {
+			value1 = 1023 * pow(sin(frequency * ticks) / 2.0 + 0.5, 0.5);
+			value2 = 1023 * pow(sin(frequency * ticks * 1.1) / 2.0 + 0.5, 0.5);
+		} else {
+			value1 = value2 = 1023;
+		}
 
 		TIM4->CCR3 = (int) value1;
 		TIM4->CCR4 = (int) value2;
@@ -186,8 +196,6 @@ static void vCheckTask(void *pvParameters) {
 }
 
 #if SAT_Enable_NRF24
-static void vReceiveNRFTask(void *pvParameters);
-
 static void vTransmitTask(void *pvParameters)
 {
 	while (1) {
@@ -253,15 +261,12 @@ static void vReceiveNRFTask(void *pvParameters)
 					if(strstr(tokenCh, "1"))
 					{
 						osQueueUARTMessage("->>  Received +1 command\r\n");
-
-						GPIOB->ODR &= ~GPIO_BSRR_BS8;
-						GPIOB->ODR &= ~GPIO_BSRR_BS9;
+						blinkingEnabled = 1;
 					}
 					else if(strstr(tokenCh, "0"))
 					{
 						osQueueUARTMessage("->>  Received  0 command\r\n");
-						GPIOB->ODR |= GPIO_BSRR_BS8;
-						GPIOB->ODR |= GPIO_BSRR_BS9;
+						blinkingEnabled = 0;
 					}
 					else
 					{
@@ -291,9 +296,9 @@ int main(void) {
 	}
 
 	xTaskCreate(vUARTTask, "UART", 300, NULL, 3, NULL);
-	xTaskCreate(vBlinkyTask, "LEDFade", 200, NULL, 2, NULL);
+	xTaskCreate(vBlinkyTask, "LEDFade", 200, NULL, 4, NULL);
 	if (SAT_Enable_NRF24) {
-		xTaskCreate(vTransmitTask, "Transmit", 600, NULL, 5, NULL);
+		xTaskCreate(vTransmitTask, "Transmit", 600, NULL, 3, NULL);
 		xTaskCreate(vReceiveNRFTask, "NRF_RX", 600, NULL, 5, &xReceiveTask);
 	}
 
