@@ -43,6 +43,7 @@ typedef char * UARTMessage_t;
 SemaphoreHandle_t xI2CSemaphore;
 QueueHandle_t xUARTQueue;
 EventGroupHandle_t xDataEventGroup; // Event group for reception of data from sensors
+TaskHandle_t xReceiveTask;
 
 #define DATA_EVENT_GROUP_BH1750_Pos   0
 #define DATA_EVENT_GROUP_MPU6050_Pos  1
@@ -185,6 +186,8 @@ static void vCheckTask(void *pvParameters) {
 }
 
 #if SAT_Enable_NRF24
+static void vReceiveNRFTask(void *pvParameters);
+
 static void vTransmitTask(void *pvParameters)
 {
 	while (1) {
@@ -220,7 +223,9 @@ static void vTransmitTask(void *pvParameters)
 
 			GPIOC->BRR = 1 << 13;
 
-			//			vTaskDelay(pdMS_TO_TICKS(100));
+			// Prepare the sensor for receiving the data while sleeping
+			nRF24_SetOperationalMode(nRF24_MODE_RX); //Set operational mode (PRX == receiver)
+			nRF24_CE_H();
 		}
 	}
 }
@@ -247,13 +252,20 @@ static void vReceiveNRFTask(void *pvParameters)
 					tokenCh = strtok (NULL, ":");
 					if(strstr(tokenCh, "1"))
 					{
+						osQueueUARTMessage("->>  Received +1 command\r\n");
+
 						GPIOB->ODR &= ~GPIO_BSRR_BS8;
 						GPIOB->ODR &= ~GPIO_BSRR_BS9;
 					}
 					else if(strstr(tokenCh, "0"))
 					{
+						osQueueUARTMessage("->>  Received  0 command\r\n");
 						GPIOB->ODR |= GPIO_BSRR_BS8;
 						GPIOB->ODR |= GPIO_BSRR_BS9;
+					}
+					else
+					{
+						osQueueUARTMessage("->>  Received content: %s", nRF24_payload);
 					}
 				}
 			}
@@ -282,7 +294,7 @@ int main(void) {
 	xTaskCreate(vBlinkyTask, "LEDFade", 200, NULL, 2, NULL);
 	if (SAT_Enable_NRF24) {
 		xTaskCreate(vTransmitTask, "Transmit", 600, NULL, 5, NULL);
-		xTaskCreate(vReceiveNRFTask, "NRF_RX", 600, NULL, 5, NULL);
+		xTaskCreate(vReceiveNRFTask, "NRF_RX", 600, NULL, 5, &xReceiveTask);
 	}
 
 	xUARTQueue = xQueueCreate(45, sizeof(UARTMessage_t *));
@@ -336,8 +348,7 @@ void prvSetupHardware()
     // NRF24 Interrupt pin initialization
     LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_AFIO);
     LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_PWR);
-
-    NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4);
+    LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_GPIOA);
     
     // Initialize the interrupt pin
     LL_GPIO_AF_SetEXTISource(LL_GPIO_AF_EXTI_PORTA, LL_GPIO_AF_EXTI_LINE2);
@@ -349,8 +360,14 @@ void prvSetupHardware()
     EXTI_InitStruct.Trigger = LL_EXTI_TRIGGER_FALLING;
     LL_EXTI_Init(&EXTI_InitStruct);
 
-    LL_GPIO_SetPinPull(GPIOA, LL_GPIO_PIN_2, LL_GPIO_PULL_UP);
-    LL_GPIO_SetPinMode(GPIOA, LL_GPIO_PIN_2, LL_GPIO_MODE_INPUT);
+    /**/
+    LL_GPIO_SetPinMode(GPIOA, LL_GPIO_PIN_2, LL_GPIO_MODE_FLOATING);
+
+    /* EXTI interrupt init*/
+    NVIC_SetPriority(EXTI2_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),15, 15));
+    NVIC_EnableIRQ(EXTI2_IRQn);
+
+    __HAL_RCC_GPIOA_CLK_ENABLE();
 
 	//LED Pins Init
 	__HAL_RCC_GPIOA_CLK_ENABLE(); // Enable clock of GPIO-A
@@ -428,6 +445,7 @@ void prvSetupHardware()
 		UART_SendStr("nRF24L01+ check: ");
 		if (!nRF24_Check()) {
 			UART_SendStr("FAIL\r\n");
+			NVIC_SystemReset();
 			while (1)
 				;
 		} else {
@@ -498,7 +516,7 @@ void NRF24_RX_ISR(void)
 {
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
-	vTaskNotifyGiveFromISR(vReceiveNRFTask, &xHigherPriorityTaskWoken);
+	vTaskNotifyGiveFromISR(xReceiveTask, &xHigherPriorityTaskWoken);
 	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 

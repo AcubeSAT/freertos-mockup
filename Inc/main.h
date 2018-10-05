@@ -71,6 +71,8 @@
 /* USER CODE BEGIN Private defines */
 #define LL_UART_DMA_CHAN_TX __LL_DMA_GET_CHANNEL(UART_DMA_CHAN_TX)
 #define LL_DMA_IsActive
+
+void NRF24_RX_ISR(void);
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
