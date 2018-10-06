@@ -53,6 +53,8 @@
 #define configMAX_TASK_NAME_LEN		( 16 )
 #define configUSE_16_BIT_TICKS		0
 #define configIDLE_SHOULD_YIELD		1
+#define configUSE_TICKLESS_IDLE		1
+
 
 /* Co-routine definitions. */
 #define configUSE_CO_ROUTINES 		0
