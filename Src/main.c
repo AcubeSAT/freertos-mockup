@@ -19,7 +19,6 @@
 #define SAT_Serial_Debug 			0 // Whether to send debug data serially (for every data reception)
 #define SAT_Enable_NRF24 			1 // Whether to enable NRF24L01+
 #define SAT_Enable_Sensors 			1 // Whether to enable I2C sensors
-
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
@@ -92,6 +91,9 @@ void osQueueUARTMessage(const char * format, ...) {
 static void vBlinkyTask(void *pvParameters) {
 	const float frequency = 0.0007;
 
+	const float blinkStep = 1.10;
+	//"exponential" rate of change in led intensity
+
 	uint8_t blinkingActive = blinkingEnabled;
 
 	uint32_t ticksDelta = 0;
@@ -103,8 +105,8 @@ static void vBlinkyTask(void *pvParameters) {
 
 		// Only spend time blinking when blinking is enabled
 		if (blinkingFadingOut) {
-			value1 = 1023 - (1023 - value1) / 1.07;
-			value2 = 1023 - (1023 - value2) / 1.07;
+			value1 = 1023 - (1023 - value1) / blinkStep;
+			value2 = 1023 - (1023 - value2) / blinkStep;
 
 			if (value1 >= 1020 && value2 >= 1020) {
 				// Fadeout complete
