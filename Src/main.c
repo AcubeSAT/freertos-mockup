@@ -231,6 +231,8 @@ static void vCheckTask(void *pvParameters) {
 #if SAT_Enable_NRF24
 static void vTransmitTask(void *pvParameters)
 {
+	    char * stringCubesatBegan = "Cubesat has begun";
+		nRF24_TransmitPacket(stringCubesatBegan, 32);
 	while (1) {
 
 		if (xEventGroupWaitBits(
