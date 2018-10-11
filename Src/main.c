@@ -13,6 +13,7 @@
 #include "stm32f1xx_ll_dma.h"
 #include "stm32f1xx_ll_usart.h"
 #include "stm32f1xx_ll_exti.h"
+#include "stm32f1xx_hal_wwdg.h"
 
 #define SAT_Acq_Period_ms 			50 // The acquisition period of the satellite
 
@@ -29,6 +30,7 @@ float gyrCal[3]; //Save the calibration values
 
 volatile uint8_t stopRX = 0; //Logic variable to indicate the stopping of the RX
 uint8_t nRF24_payload[32]; //Buffer to store a payload of maximum width
+WWDG_HandleTypeDef hwwdg;
 
 LL_EXTI_InitTypeDef LL_EXTI_InitStructure;
 
@@ -58,8 +60,28 @@ uint8_t blinkingFadingIn = 0;
 void prvSetupHardware();
 
 volatile unsigned long ulHighFrequencyTimerTicks;
+WWDG_HandleTypeDef hwwdg;
 
-void osQueueUARTMessage(const char * format, ...) {
+
+void vRefreshWWDG( void * pvParameters )
+ {
+ TickType_t xLastWakeTime;
+ hwwdg.Instance = WWDG;
+ const TickType_t xFrequency = 80;
+
+     HAL_StatusTypeDef foo;
+     xLastWakeTime = (uint32_t) 0;
+
+     while(1)
+     {
+
+         vTaskDelayUntil( &xLastWakeTime, xFrequency );
+
+         foo = HAL_WWDG_Refresh(WWDG_HandleTypeDef *hwwdg);
+     }
+ }
+void osQueueUARTMessage(const char * format, ...)
+{
 	// TODO: Less copying around bits
 
 	va_list arg;
@@ -316,7 +338,27 @@ static void vReceiveNRFTask(void *pvParameters)
 }
 #endif
 
-int main(void) {
+static  void WWDGInit(void)
+{
+
+  //PCLK1/4096 = 24MHz/4096 = 5859.375 hz
+  //5859.375/WWDG_PRESCALER_8= 732.421875 hz
+  // 124 - 63 = 65 65/732.421875 = 88.7ms max time
+  // 80 - 63 = 17 17/732.421875 = 22ms min time
+  hwwdg.Instance = WWDG;
+  hwwdg.Init.Prescaler = WWDG_PRESCALER_8;
+  hwwdg.Init.Window = 80;
+  hwwdg.Init.Counter = 124;
+  hwwdg.Init.EWIMode = WWDG_EWI_DISABLE;
+  if (HAL_WWDG_Init(&hwwdg) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+}
+
+int main(void)
+{
 
 	prvSetupHardware();
 	UART_SendStr("CubeSAT booting up...\r\n");
@@ -333,16 +375,19 @@ int main(void) {
 	}
 
 	xTaskCreate(vUARTTask, "UART", 300, NULL, 3, NULL);
-	xTaskCreate(vBlinkyTask, "LEDFade", 200, NULL, 4, NULL);
-	if (SAT_Enable_NRF24) {
-		xTaskCreate(vTransmitTask, "Transmit", 600, NULL, 3, NULL);
-		xTaskCreate(vReceiveNRFTask, "NRF_RX", 600, NULL, 5, &xReceiveTask);
-	}
+    xTaskCreate(vRefreshWWDG, "RefreshWWDG", 200, NULL, 6, NULL);
+
+    if (SAT_Enable_NRF24)
+    {
+        xTaskCreate(vTransmitTask, "Transmit", 600, NULL, 5, NULL);
+        xTaskCreate(vReceiveNRFTask, "NRF_RX", 600, NULL, 5, NULL);
+    }
 
 	xUARTQueue = xQueueCreate(45, sizeof(UARTMessage_t *));
 
 	osQueueUARTMessage("Hello world %d from FreeRTOS\r\n", xTaskGetTickCount());
 
+	WWDGInit();
 	vTaskStartScheduler();
 }
 
