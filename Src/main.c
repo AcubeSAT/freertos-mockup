@@ -69,15 +69,14 @@ void vRefreshWWDG( void * pvParameters )
  hwwdg.Instance = WWDG;
  const TickType_t xFrequency = 80;
 
-     HAL_StatusTypeDef foo;
+
      xLastWakeTime = (uint32_t) 0;
 
      while(1)
      {
 
          vTaskDelayUntil( &xLastWakeTime, xFrequency );
-
-         foo = HAL_WWDG_Refresh(WWDG_HandleTypeDef *hwwdg);
+         HAL_StatusTypeDef HAL_WWDG_Refresh(WWDG_HandleTypeDef *hwwdg);
      }
  }
 void osQueueUARTMessage(const char * format, ...)
@@ -350,10 +349,7 @@ static  void WWDGInit(void)
   hwwdg.Init.Window = 80;
   hwwdg.Init.Counter = 124;
   hwwdg.Init.EWIMode = WWDG_EWI_DISABLE;
-  if (HAL_WWDG_Init(&hwwdg) != HAL_OK)
-  {
-    _Error_Handler(__FILE__, __LINE__);
-  }
+  HAL_WWDG_Init(&hwwdg);
 
 }
 
@@ -386,7 +382,7 @@ int main(void)
 	xUARTQueue = xQueueCreate(45, sizeof(UARTMessage_t *));
 
 	osQueueUARTMessage("Hello world %d from FreeRTOS\r\n", xTaskGetTickCount());
-
+	StartupEffect();
 	WWDGInit();
 	vTaskStartScheduler();
 }
@@ -607,3 +603,10 @@ void NRF24_RX_ISR(void)
 	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
+void StartupEffect(){
+    int a;
+ 	for( a = 0; a < 40; a++){
+	HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+    HAL_Delay(a*50);
+ 	}
+}
