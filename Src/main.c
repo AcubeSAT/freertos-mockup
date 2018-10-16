@@ -69,14 +69,12 @@ void vRefreshWWDG( void * pvParameters )
  hwwdg.Instance = WWDG;
  const TickType_t xFrequency = 80;
 
-
      xLastWakeTime = (uint32_t) 0;
 
      while(1)
      {
-
          vTaskDelayUntil( &xLastWakeTime, xFrequency );
-         HAL_StatusTypeDef HAL_WWDG_Refresh(WWDG_HandleTypeDef *hwwdg);
+         HAL_WWDG_Refresh(&hwwdg);
      }
  }
 void osQueueUARTMessage(const char * format, ...)
@@ -339,7 +337,6 @@ static void vReceiveNRFTask(void *pvParameters)
 
 static  void WWDGInit(void)
 {
-
   //PCLK1/4096 = 24MHz/4096 = 5859.375 hz
   //5859.375/WWDG_PRESCALER_8= 732.421875 hz
   // 124 - 63 = 65 65/732.421875 = 88.7ms max time
@@ -351,6 +348,7 @@ static  void WWDGInit(void)
   hwwdg.Init.EWIMode = WWDG_EWI_DISABLE;
   HAL_WWDG_Init(&hwwdg);
 
+  __HAL_RCC_WWDG_CLK_ENABLE();
 }
 
 int main(void)
@@ -372,11 +370,12 @@ int main(void)
 
 	xTaskCreate(vUARTTask, "UART", 300, NULL, 3, NULL);
     xTaskCreate(vRefreshWWDG, "RefreshWWDG", 200, NULL, 6, NULL);
+    xTaskCreate(vBlinkyTask, "Blinking", 100, NULL, 3, NULL);
 
     if (SAT_Enable_NRF24)
     {
-        xTaskCreate(vTransmitTask, "Transmit", 600, NULL, 5, NULL);
-        xTaskCreate(vReceiveNRFTask, "NRF_RX", 600, NULL, 5, NULL);
+        xTaskCreate(vTransmitTask, "Transmit", 600, NULL, 1, NULL);
+        xTaskCreate(vReceiveNRFTask, "NRF_RX", 600, NULL, 1, NULL);
     }
 
 	xUARTQueue = xQueueCreate(45, sizeof(UARTMessage_t *));
@@ -603,10 +602,18 @@ void NRF24_RX_ISR(void)
 	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
+void Manual_Delay( uint32_t ms ) {
+	if (ms == 0) return;
+
+    uint32_t l = 72000/3 * ms;
+    asm volatile( "0:" "SUBS %[count], 1;" "BNE 0b;" :[count]"+r"(l) );
+}
+
 void StartupEffect(){
     int a;
- 	for( a = 0; a < 40; a++){
-	HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-    HAL_Delay(a*50);
+ 	for( a = 0; a < 20; a++){
+ 		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+ 		Manual_Delay(a);
  	}
 }
+

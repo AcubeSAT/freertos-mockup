@@ -73,6 +73,8 @@
 #define LL_DMA_IsActive
 
 void NRF24_RX_ISR(void);
+void StartupEffect(void);
+
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
