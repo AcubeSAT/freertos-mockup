@@ -216,6 +216,10 @@ static void vCheckTask(void *pvParameters)
 #if SAT_Enable_NRF24
 static void vTransmitTask(void *pvParameters)
 {
+	nRF24_SetOperationalMode(nRF24_MODE_TX); //Set operational mode (PTX == transmitter)
+	memset((uint8_t *)nRF24_payload, '\0', 32); //Fill all the array space with zeros
+	sprintf((char *)nRF24_payload, "%s", "S0");
+	nRF24_TransmitPacket(nRF24_payload, 32);
 	while (1)
 	{
 
