@@ -431,7 +431,7 @@ int main(void)
     {
         xTaskCreate(vTransmitTask, "Transmit", 600, NULL, 1, NULL);
         xTaskCreate(vReceiveNRFTask, "NRF_RX", 600, NULL, 1, NULL);
-        xTaskCreate(vManagerTask(), "Manager", 600, NULL, 1, NULL);
+        xTaskCreate(vManagerTask, "Manager", 600, NULL, 1, NULL);
     }
 
 	xUARTQueue = xQueueCreate(45, sizeof(UARTMessage_t *));
