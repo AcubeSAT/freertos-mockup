@@ -377,7 +377,7 @@ int main(void)
     if (SAT_Enable_NRF24)
     {
         xTaskCreate(vTransmitTask, "Transmit", 600, NULL, 1, NULL);
-        xTaskCreate(vReceiveNRFTask, "NRF_RX", 600, NULL, 1, NULL);
+        xTaskCreate(vReceiveNRFTask, "NRF_RX", 600, NULL, 1, &xReceiveTask);
     }
 
 	xUARTQueue = xQueueCreate(45, sizeof(UARTMessage_t *));
