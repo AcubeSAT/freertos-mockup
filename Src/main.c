@@ -42,6 +42,7 @@ struct SensorData_t {
 // TODO: Use dynamic allocation for message strings
 typedef char * UARTMessage_t;
 SemaphoreHandle_t xI2CSemaphore;
+SemaphoreHandle_t xnRF24TransmitSemaphore;
 QueueHandle_t xUARTQueue;
 EventGroupHandle_t xDataEventGroup; // Event group for reception of data from sensors
 TaskHandle_t xReceiveTask;
@@ -256,6 +257,13 @@ static void vTransmitTask(void *pvParameters)
 	nRF24_TransmitPacket(nRF24_payload, 32);
 
 	while (1) {
+		if (xSemaphoreTake(xnRF24TransmitSemaphore, pdMS_TO_TICKS(250)) == pdFALSE)
+		{
+			UART_SendStr("FATAL Error: nRF24Transmit timeout");
+			vTaskSuspend(NULL); // Stop this task
+		}
+		else
+		{
 
 		if (xEventGroupWaitBits(
 						xDataEventGroup,
@@ -285,6 +293,7 @@ static void vTransmitTask(void *pvParameters)
 			memset((uint8_t *)nRF24_payload, '\0', 32);//Fill all the array space with zeros
 			sprintf((char *)nRF24_payload, "Z%ld %ld", (int32_t)(xSensorData.acc[2]*100000.0), (int32_t)(xSensorData.acc[5]*100000.0));
 			nRF24_TransmitPacket(nRF24_payload, 32);
+			xSemaphoreGive(xnRF24TransmitSemaphore);
 
 			GPIOC->BRR = 1 << 13;
 
@@ -292,8 +301,50 @@ static void vTransmitTask(void *pvParameters)
 			nRF24_SetOperationalMode(nRF24_MODE_RX); //Set operational mode (PRX == receiver)
 			nRF24_CE_H();
 		}
+	    }
 	}
 }
+
+static void vManagerTask(void *pvParameters)
+{
+	TaskStatus_t *buffer;
+	UBaseType_t NumTasks;
+	while(1)
+	{
+		if (xSemaphoreTake(xnRF24TransmitSemaphore, pdMS_TO_TICKS(250)) == pdFALSE)
+		{
+			UART_SendStr("FATAL Error: nRF24Transmit timeout");
+			vTaskSuspend(NULL); // Stop this task
+		}
+		else
+		{
+		nRF24_SetOperationalMode(nRF24_MODE_TX); //Set operational mode (PTX == transmitter)
+		NumTasks = uxTaskGetSystemState(buffer, uxTaskGetNumberOfTasks(), NULL );
+		for(int i = 0;i<NumTasks;i++)
+		{
+			if(i==0)
+			{
+				memset((uint8_t *)nRF24_payload, '\0', 32); //Fill all the array space with zero
+				sprintf((char *)nRF24_payload, "%s", "{T");
+				nRF24_TransmitPacket(nRF24_payload, 32);
+			}
+			memset((uint8_t *)nRF24_payload, '\0', 32); //Fill all the array space with zero
+			sprintf((char *)nRF24_payload, "%d%u%s",buffer[i].eCurrentState,buffer[i].ulRunTimeCounter,buffer[i].pcTaskName );//
+			nRF24_TransmitPacket(nRF24_payload, 32);
+		}
+		memset((uint8_t *)nRF24_payload, '\0', 32); //Fill all the array space with zero
+		sprintf((char *)nRF24_payload, "%s", "}T");
+		nRF24_TransmitPacket(nRF24_payload, 32);
+		xSemaphoreGive(xnRF24TransmitSemaphore);
+		// Prepare the sensor for receiving the data while sleeping
+		nRF24_SetOperationalMode(nRF24_MODE_RX); //Set operational mode (PRX == receiver)
+		nRF24_CE_H();
+
+		vTaskDelay(pdMS_TO_TICKS(1000));
+	    }
+	}
+}
+
 
 static void vReceiveNRFTask(void *pvParameters)
 {
@@ -362,6 +413,7 @@ int main(void)
 	//vCheckTask(0);
 
 	xI2CSemaphore = xSemaphoreCreateMutex();
+	xnRF24TransmitSemaphore = xSemaphoreCreateMutex();
 	xDataEventGroup = xEventGroupCreate();
 
 	xTaskCreate(vCheckTask, "Check", 250, (void*) 1, 2, NULL);
@@ -379,6 +431,7 @@ int main(void)
     {
         xTaskCreate(vTransmitTask, "Transmit", 600, NULL, 1, NULL);
         xTaskCreate(vReceiveNRFTask, "NRF_RX", 600, NULL, 1, NULL);
+        xTaskCreate(vManagerTask(), "Manager", 600, NULL, 1, NULL);
     }
 
 	xUARTQueue = xQueueCreate(45, sizeof(UARTMessage_t *));
