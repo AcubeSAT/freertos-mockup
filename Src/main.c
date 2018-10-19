@@ -355,7 +355,7 @@ static void vReceiveNRFTask(void *pvParameters)
 	{
 		if (xSemaphoreTake(xnRF24Semaphore, pdMS_TO_TICKS(250)) == pdFALSE)
 		{
-			UART_SendStr("FATAL Error: nRF24Transmit timeout");
+			UART_SendStr("FATAL Error: nRF24Receive timeout");
 			vTaskSuspend(NULL); // Stop this task
 		}
 		else
