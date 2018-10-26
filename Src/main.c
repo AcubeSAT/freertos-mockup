@@ -183,7 +183,7 @@ static void vMPU9250Task(void *pvParameters)
 
 			if (SAT_Serial_Debug)
 			{
-				osQueueUARTMessage("acc dump %.2f %.2f %.2f %.2f %.2f %.2f\nmag %.2f %.2f %.2f\r\n",
+				osQueueUARTMessage("acc dump %.2f %.2f %.2f %.2f %.2f %.2f\r\nmag dump %.2f %.2f %.2f\r\n",
 						100 * xSensorData.acc[0],
 						100 * xSensorData.acc[1],
 						100 * xSensorData.acc[2],
@@ -323,7 +323,7 @@ int main(void)
 
 	if (SAT_Enable_NRF24)
 	{
-		xTaskCreate(vTransmitTask, "Transmit", 600, NULL, 5, NULL);
+		xTaskCreate(vTransmitTask, "Transmit", 600, NULL, 3, NULL);
 		xTaskCreate(vReceiveNRFTask, "NRF_RX", 600, NULL, 5, NULL);
 	}
 
@@ -454,8 +454,8 @@ void prvSetupHardware()
 	{
 		TWIInit(); //Initialize I2C
 
-		MPU9250Init(AFS_2G, GFS_500DPS); //Initialize the MPU9250
 		MPU9250Calibration(gyrCal); //Get the gyroscope calibration values
+		MPU9250Init(AFS_2G, GFS_500DPS); //Initialize the MPU9250
 		MPU9250_SetFullScaleGyroRange(GFS_2000DPS); //Set the gyroscope scale to full scale
 
 		AK8963Init(AK8963_16BIT, AK8963_CONT100HZ, xSensorData.magn_adj);

@@ -169,7 +169,7 @@
 		<link>
 			<name>Application/User/MPU9250.c</name>
 			<type>1</type>
-			<location>C:/Users/dimst/Atollic/TrueSTUDIO/STM32_workspace_9.0/Mockup/Src/MPU9250.c</location>
+			<locationURI>PARENT-2-PROJECT_LOC/Src/MPU9250.c</locationURI>
 		</link>
 		<link>
 			<name>Application/User/SPI.c</name>
