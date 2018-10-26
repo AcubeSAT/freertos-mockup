@@ -48,6 +48,12 @@ typedef char * UARTMessage_t;
 SemaphoreHandle_t xI2CSemaphore;
 QueueHandle_t xUARTQueue;
 EventGroupHandle_t xDataEventGroup; // Event group for reception of data from sensors
+TaskHandle_t xReceiveTask;
+
+// LED blinking flags
+uint8_t blinkingEnabled = 1;
+uint8_t blinkingFadingOut = 0;
+uint8_t blinkingFadingIn = 0;
 
 #define DATA_EVENT_GROUP_BH1750_Pos   0
 #define DATA_EVENT_GROUP_MPU9250_Pos  1
