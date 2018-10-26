@@ -13,6 +13,7 @@
 #include "stm32f1xx_ll_dma.h"
 #include "stm32f1xx_ll_usart.h"
 #include "stm32f1xx_ll_exti.h"
+#include "stm32f1xx_hal_wwdg.h"
 
 #define SAT_Acq_Period_ms 			50 // The acquisition period of the satellite
 
@@ -57,7 +58,23 @@ EventGroupHandle_t xDataEventGroup; // Event group for reception of data from se
 void prvSetupHardware();
 
 volatile unsigned long ulHighFrequencyTimerTicks;
+WWDG_HandleTypeDef hwwdg;
 
+
+void vRefreshWWDG( void * pvParameters )
+ {
+ TickType_t xLastWakeTime;
+ hwwdg.Instance = WWDG;
+ const TickType_t xFrequency = 80;
+
+     xLastWakeTime = (uint32_t) 0;
+
+     while(1)
+     {
+         vTaskDelayUntil( &xLastWakeTime, xFrequency );
+         HAL_WWDG_Refresh(&hwwdg);
+     }
+ }
 void osQueueUARTMessage(const char * format, ...)
 {
 	// TODO: Less copying around bits
@@ -76,32 +93,67 @@ void osQueueUARTMessage(const char * format, ...)
 	if (pcUARTMessage == NULL)
 	{
 		UART_SendStr("ERROR! Not enough memory to store UART string\r\n");
-	}
-	else
-	{
+	} else {
 		strcpy(pcUARTMessage, buffer);
 
 		// TODO: Show a warning if the queue is full (e.g. replace the last
 		// message in the queue)
-		if (xQueueSend(xUARTQueue, (void* ) (&pcUARTMessage), (TickType_t ) 0) == pdFAIL)
-		{
+		if (xQueueSend(xUARTQueue, (void* ) (&pcUARTMessage),
+				(TickType_t ) 0) == pdFAIL) {
 			// Make sure to deallocate the failed message
 			vPortFree(pcUARTMessage);
 		}
 	}
 }
 
-static void vBlinkyTask(void *pvParameters)
-{
-	//const float frequency = 0.0007;
-	const float frequency = 0.007;
+static void vBlinkyTask(void *pvParameters) {
+	const float frequency = 0.0007;
 
-	while (1)
-	{
-		float ticks = xTaskGetTickCount();
+	const float blinkStep = 1.10;
+	//"exponential" rate of change in led intensity
 
-		double value1 = 1023 * pow(sin(frequency * ticks) / 2.0 + 0.5, 0.5);
-		double value2 = 1023 * pow(sin(frequency * ticks * 1.1) / 2.0 + 0.5, 0.5);
+	uint8_t blinkingActive = blinkingEnabled;
+
+	uint32_t ticksDelta = 0;
+
+	double value1 = 0, value2 = 0;
+
+	while (1) {
+		float ticks = xTaskGetTickCount() - ticksDelta;
+
+		// Only spend time blinking when blinking is enabled
+		if (blinkingFadingOut) {
+			value1 = 1023 - (1023 - value1) / blinkStep;
+			value2 = 1023 - (1023 - value2) / blinkStep;
+
+			if (value1 >= 1020 && value2 >= 1020) {
+				// Fadeout complete
+				blinkingFadingOut = 0;
+
+				value1 = value2 = 1023;
+
+				// Set LEDS to Hi-Z
+//				LL_GPIO_SetPinMode(GPIOB, LL_GPIO_PIN_8, LL_GPIO_MODE_INPUT);
+//				LL_GPIO_SetPinMode(GPIOB, LL_GPIO_PIN_9, LL_GPIO_MODE_INPUT);
+			}
+		} else if (blinkingFadingIn) {
+//			LL_GPIO_SetPinMode(GPIOB, LL_GPIO_PIN_8, LL_GPIO_MODE_ALTERNATE);
+//			LL_GPIO_SetPinMode(GPIOB, LL_GPIO_PIN_9, LL_GPIO_MODE_ALTERNATE);
+
+			// Fade up
+			value1 = 1023 - (1024 - value1) * 1.04;
+			value2 = 1023 - (1024 - value2) * 1.04;
+
+			if (value1 <= 707 && value2 <= 707) {
+				// Fadein complete
+				blinkingFadingIn = 0;
+				ticksDelta = xTaskGetTickCount();
+				value1 = value2 = 707;
+			}
+		} else if (blinkingEnabled) {
+			value1 = 1023 * pow(sin(frequency * ticks) / 2.0 + 0.5, 0.5);
+			value2 = 1023 * pow(sin(frequency * ticks * 1.1) / 2.0 + 0.5, 0.5);
+		}
 
 		TIM4->CCR3 = (int) value1;
 		TIM4->CCR4 = (int) value2;
@@ -109,15 +161,11 @@ static void vBlinkyTask(void *pvParameters)
 		vTaskDelay(pdMS_TO_TICKS(5));
 	}
 }
-
-static void vUARTTask(void *pvParameters)
-{
+static void vUARTTask(void *pvParameters) {
 	UARTMessage_t message;
 
-	while (1)
-	{
-		if (xQueueReceive(xUARTQueue, &message, portMAX_DELAY))
-		{ // Receive a message from the queue
+	while (1) {
+		if (xQueueReceive(xUARTQueue, &message, portMAX_DELAY)) { // Receive a message from the queue
 			LL_USART_EnableDMAReq_TX(UART_PORT); // Enable DMA in the USART registers
 			LL_DMA_SetDataLength(DMA1, LL_UART_DMA_CHAN_TX, strlen(message)); // Set amount of copied bits for DMA
 			LL_DMA_ConfigAddresses(DMA1, LL_UART_DMA_CHAN_TX, message, &(UART_PORT->DR), LL_DMA_DIRECTION_MEMORY_TO_PERIPH); // Send message from memory to the USART Data Register
@@ -141,15 +189,11 @@ static void vBH1750Task(void *pvParameters)
 	// Store the last wake time so that we can delay later
 	TickType_t xLastWakeTime = xTaskGetTickCount();
 
-	while(1)
-	{
-		if (xSemaphoreTake(xI2CSemaphore, pdMS_TO_TICKS(250)) == pdFALSE)
-		{
+	while(1) {
+		if (xSemaphoreTake(xI2CSemaphore, pdMS_TO_TICKS(250)) == pdFALSE) {
 			UART_SendStr("FATAL Error: I2C timeout");
 			vTaskSuspend(NULL); // Stop this task
-		}
-		else
-		{
+		} else {
 			xSensorData.brightness = BH1750_GetBrightnessCont();
 			xSemaphoreGive(xI2CSemaphore);
 			xEventGroupSetBits(xDataEventGroup, DATA_EVENT_GROUP_BH1750_Msk);
@@ -201,12 +245,10 @@ static void vMPU9250Task(void *pvParameters)
 }
 #endif
 
-static void vCheckTask(void *pvParameters)
-{
+static void vCheckTask(void *pvParameters) {
 	uint8_t value = (uint8_t) pvParameters;
 
-	while(1)
-	{
+	for (;;) {
 		osQueueUARTMessage("%d SystemGood %d \r\n", value, xTaskGetTickCount());
 		//taskYIELD();
 		vTaskDelay(pdMS_TO_TICKS(1000));
@@ -255,7 +297,9 @@ static void vTransmitTask(void *pvParameters)
 
 			GPIOC->BRR = 1 << 13;
 
-			//			vTaskDelay(pdMS_TO_TICKS(100));
+			// Prepare the sensor for receiving the data while sleeping
+			nRF24_SetOperationalMode(nRF24_MODE_RX); //Set operational mode (PRX == receiver)
+			nRF24_CE_H();
 		}
 	}
 }
@@ -285,13 +329,19 @@ static void vReceiveNRFTask(void *pvParameters)
 					tokenCh = strtok (NULL, ":"); // Tokenize the string
 					if(strstr(tokenCh, "1"))
 					{
-						GPIOB->ODR &= ~GPIO_BSRR_BS8;
-						GPIOB->ODR &= ~GPIO_BSRR_BS9;
+						osQueueUARTMessage("->>  Received +1 command\r\n");
+						blinkingEnabled = 1;
+						blinkingFadingIn = 1;
 					}
 					else if(strstr(tokenCh, "0"))
 					{
-						GPIOB->ODR |= GPIO_BSRR_BS8;
-						GPIOB->ODR |= GPIO_BSRR_BS9;
+						osQueueUARTMessage("->>  Received  0 command\r\n");
+						blinkingEnabled = 0;
+						blinkingFadingOut = 1;
+					}
+					else
+					{
+						osQueueUARTMessage("->>  Received content: %s", nRF24_payload);
 					}
 				}
 			}
@@ -299,6 +349,22 @@ static void vReceiveNRFTask(void *pvParameters)
 	}
 }
 #endif
+
+static  void WWDGInit(void)
+{
+  //PCLK1/4096 = 24MHz/4096 = 5859.375 hz
+  //5859.375/WWDG_PRESCALER_8= 732.421875 hz
+  // 124 - 63 = 65 65/732.421875 = 88.7ms max time
+  // 80 - 63 = 17 17/732.421875 = 22ms min time
+  hwwdg.Instance = WWDG;
+  hwwdg.Init.Prescaler = WWDG_PRESCALER_8;
+  hwwdg.Init.Window = 80;
+  hwwdg.Init.Counter = 124;
+  hwwdg.Init.EWIMode = WWDG_EWI_DISABLE;
+  HAL_WWDG_Init(&hwwdg);
+
+  __HAL_RCC_WWDG_CLK_ENABLE();
+}
 
 int main(void)
 {
@@ -319,18 +385,20 @@ int main(void)
 	}
 
 	xTaskCreate(vUARTTask, "UART", 300, NULL, 3, NULL);
-	xTaskCreate(vBlinkyTask, "LEDFade", 200, NULL, 2, NULL);
+    xTaskCreate(vRefreshWWDG, "RefreshWWDG", 200, NULL, 6, NULL);
+    xTaskCreate(vBlinkyTask, "Blinking", 100, NULL, 3, NULL);
 
-	if (SAT_Enable_NRF24)
-	{
-		xTaskCreate(vTransmitTask, "Transmit", 600, NULL, 3, NULL);
-		xTaskCreate(vReceiveNRFTask, "NRF_RX", 600, NULL, 5, NULL);
-	}
+    if (SAT_Enable_NRF24)
+    {
+        xTaskCreate(vTransmitTask, "Transmit", 600, NULL, 1, NULL);
+        xTaskCreate(vReceiveNRFTask, "NRF_RX", 600, NULL, 1, &xReceiveTask);
+    }
 
 	xUARTQueue = xQueueCreate(45, sizeof(UARTMessage_t *));
 
 	osQueueUARTMessage("Hello world %d from FreeRTOS\r\n", xTaskGetTickCount());
-
+	StartupEffect();
+	WWDGInit();
 	vTaskStartScheduler();
 }
 
@@ -378,8 +446,7 @@ void prvSetupHardware()
     // NRF24 Interrupt pin initialization
     LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_AFIO);
     LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_PWR);
-
-    NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4);
+    LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_GPIOA);
     
     /***** NRF24 Interrupt pin init *****/
     // Initialize the interrupt pin
@@ -392,9 +459,14 @@ void prvSetupHardware()
     EXTI_InitStruct.Trigger = LL_EXTI_TRIGGER_FALLING;
     LL_EXTI_Init(&EXTI_InitStruct);
 
-    LL_GPIO_SetPinPull(GPIOA, LL_GPIO_PIN_2, LL_GPIO_PULL_UP);
-    LL_GPIO_SetPinMode(GPIOA, LL_GPIO_PIN_2, LL_GPIO_MODE_INPUT);
-    /***** NRF24 Interrupt pin init *****/
+    /**/
+    LL_GPIO_SetPinMode(GPIOA, LL_GPIO_PIN_2, LL_GPIO_MODE_FLOATING);
+
+    /* EXTI interrupt init*/
+    NVIC_SetPriority(EXTI2_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),15, 15));
+    NVIC_EnableIRQ(EXTI2_IRQn);
+
+    __HAL_RCC_GPIOA_CLK_ENABLE();
 
 	//LED Pins Init
 	__HAL_RCC_GPIOA_CLK_ENABLE(); // Enable clock of GPIO-A
@@ -463,8 +535,7 @@ void prvSetupHardware()
 		BH1750_Init(BH1750_CONTHRES); //I2C is already initialized above
 	}
 
-	if (SAT_Enable_NRF24)
-	{
+	if (SAT_Enable_NRF24) {
 
 		nRF24_GPIO_Init(); //Start the pins used by the NRF24
 		nRF24_Init(); //Initialize the nRF24L01 to its default state
@@ -473,13 +544,12 @@ void prvSetupHardware()
 
 		//A small check for debugging
 		UART_SendStr("nRF24L01+ check: ");
-		if (!nRF24_Check())
-		{
+		if (!nRF24_Check()) {
 			UART_SendStr("FAIL\r\n");
-			while (1);
-		}
-		else
-		{
+			NVIC_SystemReset();
+			while (1)
+				;
+		} else {
 			UART_SendStr("OK\r\n");
 		}
 
@@ -513,8 +583,7 @@ void prvSetupHardware()
 		nRF24_SetPowerMode(nRF24_PWR_UP); //Wake the transceiver
 	}
 
-	if (SAT_Enable_FreeRTOS_Trace)
-	{
+	if (SAT_Enable_FreeRTOS_Trace) {
 		// Set interrupt priority and enable TIMER1 interrupt in NVIC
 		HAL_NVIC_SetPriority(TIM1_UP_IRQn, 0, 0);
 		HAL_NVIC_EnableIRQ(TIM1_UP_IRQn);
@@ -548,8 +617,22 @@ void NRF24_RX_ISR(void)
 {
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
-	// Send a notification to FREERTOS for the task to take priority
-	vTaskNotifyGiveFromISR(vReceiveNRFTask, &xHigherPriorityTaskWoken);
+	vTaskNotifyGiveFromISR(xReceiveTask, &xHigherPriorityTaskWoken);
 	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+}
+
+void Manual_Delay( uint32_t ms ) {
+	if (ms == 0) return;
+
+    uint32_t l = 72000/3 * ms;
+    asm volatile( "0:" "SUBS %[count], 1;" "BNE 0b;" :[count]"+r"(l) );
+}
+
+void StartupEffect(){
+    int a;
+ 	for( a = 0; a < 20; a++){
+ 		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+ 		Manual_Delay(a);
+ 	}
 }
 

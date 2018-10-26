@@ -11,7 +11,7 @@ void nRF24_GPIO_Init(void)
 	RCC->APB2ENR |= nRF24_GPIO_PERIPHERALS;
 	
 	//Configure nRF24 IRQ pin
-	PORT.Mode	= GPIO_MODE_OUTPUT_PP;
+	PORT.Mode	= GPIO_MODE_IT_FALLING;
 	PORT.Speed	= GPIO_SPEED_FREQ_LOW;
 	PORT.Pin	= nRF24_IRQ_PIN;
 	HAL_GPIO_Init(nRF24_IRQ_PORT, &PORT);
@@ -25,6 +25,8 @@ void nRF24_GPIO_Init(void)
 	SPI_MasterInit(MSB_FIRST, SCK_FOSC_8);
 
 	// Configure CE pin
+	PORT.Mode = GPIO_MODE_OUTPUT_PP;
+	PORT.Speed = GPIO_SPEED_FREQ_LOW;
 	PORT.Pin = nRF24_CE_PIN;
 	HAL_GPIO_Init(nRF24_CE_PORT, &PORT);
 	nRF24_CE_L();

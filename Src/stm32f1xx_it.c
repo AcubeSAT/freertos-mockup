@@ -34,6 +34,7 @@
 #include "stm32f1xx_hal.h"
 #include "stm32f1xx.h"
 #include "stm32f1xx_it.h"
+#include "main.h"
 
 /* USER CODE BEGIN 0 */
 
@@ -193,5 +194,9 @@ void DebugMon_Handler(void)
 
 /* USER CODE BEGIN 1 */
 
+void EXTI2_IRQHandler(void) {
+	NRF24_RX_ISR();
+	LL_EXTI_ClearFlag_0_31(LL_EXTI_LINE_2);
+}
 /* USER CODE END 1 */
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
