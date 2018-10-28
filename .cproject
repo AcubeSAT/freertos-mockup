@@ -116,9 +116,6 @@
 							<inputType id="com.atollic.truestudio.gcc.input.1274347818" superClass="com.atollic.truestudio.gcc.input"/>
 						</tool>
 					</fileInfo>
-					<fileInfo id="com.atollic.truestudio.exe.debug.1518366166.976435898" name="MPU6050.c" rcbsApplicability="disable" resourcePath="Application/User/MPU6050.c" toolsToInvoke="com.atollic.truestudio.exe.debug.toolchain.gcc.1836874447.1466848119">
-						<tool id="com.atollic.truestudio.exe.debug.toolchain.gcc.1836874447.1466848119" name="C Compiler" superClass="com.atollic.truestudio.exe.debug.toolchain.gcc.1836874447"/>
-					</fileInfo>
 					<fileInfo id="com.atollic.truestudio.exe.debug.1518366166.716937120" name="main.c" rcbsApplicability="disable" resourcePath="Application/User/main.c" toolsToInvoke="com.atollic.truestudio.exe.debug.toolchain.gcc.1836874447.1522539770">
 						<tool errorParsers="org.eclipse.cdt.core.GCCErrorParser" id="com.atollic.truestudio.exe.debug.toolchain.gcc.1836874447.1522539770" name="C Compiler" superClass="com.atollic.truestudio.exe.debug.toolchain.gcc.1836874447">
 							<option id="com.atollic.truestudio.exe.debug.toolchain.gcc.optimization.level.56086717" name="Optimization Level" superClass="com.atollic.truestudio.exe.debug.toolchain.gcc.optimization.level" useByScannerDiscovery="false" value="com.atollic.truestudio.gcc.optimization.level.00" valueType="enumerated"/>
