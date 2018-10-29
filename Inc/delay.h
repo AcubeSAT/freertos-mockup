@@ -1,13 +1,10 @@
 #ifndef __DELAY_H
 #define __DELAY_H
 
-
 #include "stm32f1xx.h"
-
 
 // Set to "1" to use the inlined Delay_ms() function
 #define DELAY_INLINE               1
-
 
 // Public functions and macros
 
@@ -16,14 +13,24 @@
 // input:
 //   delay_counter - number of milliseconds to wait
 __STATIC_INLINE void Delay_ms(__IO uint32_t delay_counter) {
-    while (delay_counter) {
-        if (SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk) {
-            delay_counter--;
-        }
-    }
+	while (delay_counter) {
+		if (SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk) {
+			delay_counter--;
+		}
+	}
 }
 #endif // DELAY_INLINE
 
+/**
+ * A costly delay based on processor instructions
+ */
+inline void Manual_Delay(uint32_t ms) {
+	if (ms == 0)
+		return;
+
+	uint32_t l = 72000 / 3 * ms;
+	asm volatile( "0:" "SUBS %[count], 1;" "BNE 0b;" :[count]"+r"(l) );
+}
 
 // Function prototypes
 void Delay_Init(void);
