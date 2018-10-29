@@ -25,6 +25,7 @@
 #include "Tasks/SensorTask.h"
 #include "Tasks/TraceTask.h"
 #include "Tasks/UARTTask.h"
+#include "Tasks/GPSTask.h"
 #include "Tasks/WWDGTask.h"
 
 void prvSetupHardware();
