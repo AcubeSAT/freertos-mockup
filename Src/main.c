@@ -36,8 +36,8 @@ int main(void) {
 	xI2CSemaphore = xSemaphoreCreateMutex();
 	xDataEventGroup = xEventGroupCreate();
 
-	xTaskCreate(vCheckTask, "Check", 250, (void*) 1, 2, NULL);
-	xTaskCreate(vCheckTask, "Check", 250, (void*) 2, 2, NULL);
+	xTaskCreate(vCheckTask, "Check", 250, (void*) 1, 1, NULL);
+	xTaskCreate(vCheckTask, "Check", 250, (void*) 2, 8, NULL);
 #if SAT_Enable_Sensors
 	xTaskCreate(vMPU9250Task, "MPU9250", 400, NULL, 4, NULL);
 	xTaskCreate(vBH1750Task, "BH1750", 400, NULL, 4, NULL);

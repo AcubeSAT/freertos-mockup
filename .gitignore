@@ -38,7 +38,7 @@
 .bin
 .depend
 .map
-.launch
+*.launch
 .settings/
 .mxproject
 /Debug/
