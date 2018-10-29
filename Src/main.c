@@ -44,13 +44,18 @@ int main(void) {
 	xTaskCreate(vBH1750Task, "BH1750", 400, NULL, 4, NULL);
 #endif
 
-	xTaskCreate(vUARTTask, "UART", 300, NULL, 3, NULL);
+	xTaskCreate(vUARTTask, "UART", 300, NULL, 3, &xUARTTaskHandle);
 	xTaskCreate(vRefreshWWDGTask, "RefreshWWDG", 200, NULL, 6, NULL);
 	xTaskCreate(vBlinkyTask, "Blinking", 300, NULL, 3, NULL);
 
 #if SAT_Enable_NRF24
 	xTaskCreate(vTransmitTask, "NRF_TX", 600, NULL, 1, NULL);
 	xTaskCreate(vReceiveTask, "NRF_RX", 600, NULL, 1, &xReceiveTask);
+#endif
+
+#if SAT_Enable_GPS
+	xTaskCreate(vGPSMessageRXTask, "GPS_Msg_RX", 400, NULL, 3, &xGPSMsgRXTask);
+	xTaskCreate(vGPSTask, "GPS_Main", 400, NULL, 4, NULL);
 #endif
 
 	xUARTQueue = xQueueCreate(45, sizeof(UARTMessage_t *));
@@ -115,6 +120,9 @@ void prvSetupHardware() {
 #endif
 #if SAT_Enable_Sensors
 	vSetupSensors();
+#endif
+#if SAT_Enable_GPS
+	vSetupGPS();
 #endif
 	vSetupBlinky();
 	vSetupCheck();
