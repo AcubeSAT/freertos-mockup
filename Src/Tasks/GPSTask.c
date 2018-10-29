@@ -13,6 +13,8 @@ char cDMA_TX_Buffer[COMMAND_REQUEST_SIZE + 1];
 
 // Task handle
 TaskHandle_t xGPSMsgRXTask;
+QueueHandle_t xGPSQueue;
+GPSData_t xGPSData;
 
 LL_DMA_InitTypeDef dma_usart_rx;  // Define the DMA structure for RX
 LL_DMA_InitTypeDef dma_usart_tx;  // Define the DMA structure for TX
@@ -101,6 +103,8 @@ void vSetupGPS(void) {
 			NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 13, 0));
 	NVIC_EnableIRQ(DMA1_Channel2_IRQn);
 	/********************** GPS USART TX DMA **********************/
+
+	xGPSQueue = xQueueCreate(80, sizeof(GPSMessage_t *));  // Create the GPS queue
 }
 
 void osQueueGPSMessage(const char * format, ...)
