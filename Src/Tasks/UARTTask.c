@@ -23,8 +23,8 @@ void vUARTTask(void *pvParameters) {
 		if (xQueueReceive(xUARTQueue, &message, portMAX_DELAY)) { // Receive a message from the queue
 			LL_USART_EnableDMAReq_TX(UART_PORT); // Enable DMA in the USART registers
 			LL_DMA_SetDataLength(DMA1, LL_UART_DMA_CHAN_TX, strlen(message)); // Set amount of copied bits for DMA
-			LL_DMA_ConfigAddresses(DMA1, LL_UART_DMA_CHAN_TX, message,
-					&(UART_PORT->DR), LL_DMA_DIRECTION_MEMORY_TO_PERIPH); // Send message from memory to the USART Data Register
+			LL_DMA_ConfigAddresses(DMA1, LL_UART_DMA_CHAN_TX, (uint32_t)message,
+					(uint32_t)&(UART_PORT->DR), LL_DMA_DIRECTION_MEMORY_TO_PERIPH); // Send message from memory to the USART Data Register
 			LL_DMA_EnableChannel(DMA1, LL_UART_DMA_CHAN_TX); // Enable the DMA transaction
 
 			// Note: The following polling method doesn't make sense, since it wastes the processor speed.
