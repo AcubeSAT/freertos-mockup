@@ -6,14 +6,13 @@
 #include "stdarg.h"
 
 #include "Tasks/UARTTask.h"
-QueueHandle_t xUARTQueue;
 
 #define LL_UART_DMA_CHAN_TX __LL_DMA_GET_CHANNEL(UART_DMA_CHAN_TX)
 #define LL_DMA_IsActive
 
 DMA_HandleTypeDef dma;
 
-// Task handle
+QueueHandle_t xUARTQueue;
 TaskHandle_t xUARTTaskHandle;
 
 /**
