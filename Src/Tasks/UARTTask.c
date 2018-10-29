@@ -13,11 +13,14 @@ QueueHandle_t xUARTQueue;
 
 DMA_HandleTypeDef dma;
 
+// Task handle
+TaskHandle_t xUARTTaskHandle;
+
 /**
  * A task that prints strings via UART through DMA
  */
 void vUARTTask(void *pvParameters) {
-	UARTMessage_t message;
+	UARTMessage_t message = NULL;
 
 	while (1) {
 		if (xQueueReceive(xUARTQueue, &message, portMAX_DELAY)) { // Receive a message from the queue
@@ -27,16 +30,9 @@ void vUARTTask(void *pvParameters) {
 					(uint32_t)&(UART_PORT->DR), LL_DMA_DIRECTION_MEMORY_TO_PERIPH); // Send message from memory to the USART Data Register
 			LL_DMA_EnableChannel(DMA1, LL_UART_DMA_CHAN_TX); // Enable the DMA transaction
 
-			// Note: The following polling method doesn't make sense, since it wastes the processor speed.
-			// An interrupt should be used instead.
-			while (__HAL_DMA_GET_FLAG(&dma, __HAL_DMA_GET_TC_FLAG_INDEX(&dma))
-					== RESET) {
-			} // Wait until the transaction is complete
-			__HAL_DMA_CLEAR_FLAG(&dma, __HAL_DMA_GET_TC_FLAG_INDEX(&dma)); // Clear the Transaction Complete flag so it can be used later
-
-			LL_DMA_DisableChannel(DMA1, LL_UART_DMA_CHAN_TX); // Disable the DMA channel (this is necessary, so it can be reused later)
-			LL_USART_DisableDMAReq_TX(UART_PORT); // Disable DMA in the USART registers
+			xTaskNotifyWait(0x00, 0x00, NULL, portMAX_DELAY);
 			vPortFree(message); // Free up the memory held by the message string
+			message = NULL;
 		}
 	}
 }
@@ -89,4 +85,17 @@ void vSetupUART() {
 	dma.Init.Priority = DMA_PRIORITY_LOW;
 	HAL_DMA_Init(&dma);
 	//	__HAL_LINKDMA(huart,hdmatx,dma);
+
+	LL_DMA_EnableIT_TC(DMA1, LL_UART_DMA_CHAN_TX);
+
+	NVIC_SetPriority(DMA1_Channel4_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 12, 0));
+	NVIC_EnableIRQ(DMA1_Channel4_IRQn);
+}
+
+void DMA_UART_TX_ISR(void){
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+	// Notify the UART1 TX task that transaction has ended
+	vTaskNotifyGiveFromISR(xUARTTaskHandle, &xHigherPriorityTaskWoken);
+	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
