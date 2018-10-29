@@ -11,6 +11,8 @@
 #include "Tasks/SensorTask.h"
 #include "Tasks/UARTTask.h"
 
+#include "Peripherals/TempMsr.h"
+
 SensorData_t xSensorData;
 SemaphoreHandle_t xI2CSemaphore;
 
@@ -68,6 +70,15 @@ void vMPU9250Task(void *pvParameters) {
 	}
 }
 
+void vTempTask(void *pvParameters)
+{
+	while(1)
+	{
+        xSensorData.temp = getTemp();  //continually update the appropriate variable inside the sensor data struct
+        vTaskDelay(pdMS_TO_TICKS(1000));   //1 second per measurement is enough
+	}
+}
+
 void vSetupSensors() {
 	TWIInit(); //Initialize I2C
 
@@ -78,5 +89,7 @@ void vSetupSensors() {
 	AK8963Init(AK8963_16BIT, AK8963_CONT100HZ, xSensorData.magn_adj);
 
 	BH1750_Init(BH1750_CONTHRES); //I2C is already initialized above
+
+	ADC_TempMsr_Init();   //initialize ADC1 for temp. measurements
 }
 #endif

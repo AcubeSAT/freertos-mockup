@@ -5,7 +5,7 @@
  *  Author: Grigoris Pavlakis
  */
 
-#include "TempMsr.h"
+#include "Peripherals/TempMsr.h"
 
 volatile int32_t sensorData = 0;
 volatile int32_t temp = 0;
@@ -52,6 +52,6 @@ void ADC_Config()
     /* Set ADC group regular sequence: channel on the selected sequence rank. */
     LL_ADC_REG_SetSequencerRanks(ADC1, LL_ADC_REG_RANK_1, LL_ADC_CHANNEL_TEMPSENSOR);
 
-    LL_ADC_SetChannelSamplingTime(ADC1, LL_ADC_CHANNEL_16, 91 * ADC_SAMPLETIME_1CYCLE_5);
+    LL_ADC_SetChannelSamplingTime(ADC1, LL_ADC_CHANNEL_16, 91 * LL_ADC_SAMPLINGTIME_1CYCLE_5);
 }
 

@@ -41,6 +41,7 @@ int main(void) {
 #if SAT_Enable_Sensors
 	xTaskCreate(vMPU9250Task, "MPU9250", 400, NULL, 4, NULL);
 	xTaskCreate(vBH1750Task, "BH1750", 400, NULL, 4, NULL);
+	xTaskCreate(vTempTask, "TempMeasure", 100, NULL, 4, NULL);
 #endif
 
 	xTaskCreate(vUARTTask, "UART", 300, NULL, 3, NULL);

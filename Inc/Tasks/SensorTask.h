@@ -15,6 +15,7 @@ typedef struct {
 	double gyr[3];  // Readings from the gyroscope
 	float magn[3];  // Readings of the magnetometer
 	float magn_adj[3];  // Magnetometer adjustment values
+	int32_t temp;    //Core temperature readings
 } SensorData_t;
 
 extern SensorData_t xSensorData;
@@ -40,6 +41,7 @@ SemaphoreHandle_t xI2CSemaphore;
 #if SAT_Enable_Sensors
 void vBH1750Task(void *pvParameters);
 void vMPU9250Task(void *pvParameters);
+void vTempTask(void *pvParameters);
 void vSetupSensors();
 #endif
 
