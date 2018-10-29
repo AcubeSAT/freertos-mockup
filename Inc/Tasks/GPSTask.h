@@ -29,9 +29,6 @@
 
 
 #if SAT_Enable_GPS
-typedef char * GPSMessage_t;
-extern TaskHandle_t xGPSMsgRXTask;
-extern QueueHandle_t xGPSQueue;
 
 typedef struct
 {
@@ -61,10 +58,12 @@ typedef struct
 	char fix_mode;
 } GPSData_t;
 
+typedef char * GPSMessage_t;
 extern GPSData_t xGPSData;
+extern TaskHandle_t xGPSMsgRXTask;
 
-extern void vSetupGPS(void);
-extern void vGPSTask(void *pvParameters);
+extern void vSetupGPS(void);  // Initial setup of the USART, DMA and the message queue
+extern void vGPSTask(void *pvParameters);  // Main GPS task
 extern void vGPSMessageRXTask(void *pvParameters);
 extern void vRequestGPSData(int8_t nmeaCommand, char *commandString);
 extern void vGPSDMAMessageTX(char *pcTxMessage);
