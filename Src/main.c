@@ -45,7 +45,7 @@ int main(void) {
 
 	xTaskCreate(vUARTTask, "UART", 300, NULL, 3, NULL);
 	xTaskCreate(vRefreshWWDGTask, "RefreshWWDG", 200, NULL, 6, NULL);
-	xTaskCreate(vBlinkyTask, "Blinking", 100, NULL, 3, NULL);
+	xTaskCreate(vBlinkyTask, "Blinking", 300, NULL, 3, NULL);
 
 #if SAT_Enable_NRF24
 	xTaskCreate(vTransmitTask, "NRF_TX", 600, NULL, 1, NULL);
