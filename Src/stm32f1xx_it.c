@@ -204,6 +204,7 @@ void EXTI2_IRQHandler(void) {
 	LL_EXTI_ClearFlag_0_31(LL_EXTI_LINE_2);
 }
 
+// UART3 IRQ used for idle line detection to read the message from the DMA
 void USART3_IRQHandler(void) {
 	if (LL_USART_IsActiveFlag_IDLE(UART_PORT_GPS)) {
 		LL_USART_ClearFlag_IDLE(UART_PORT_GPS);
@@ -213,12 +214,14 @@ void USART3_IRQHandler(void) {
     }
 }
 
+// DMA IRQ used in UART3 for GPS TX transactions
 void DMA1_Channel2_IRQHandler(void) {
 #if SAT_Enable_GPS
 	DMA_GPS_TX_ISR();
 #endif
 }
 
+// DMA IRQ used in UART1 TX transactions
 void DMA1_Channel4_IRQHandler(void) {
 	if(LL_DMA_IsActiveFlag_TC4(DMA1)) {
 		LL_DMA_ClearFlag_TC4(DMA1);
