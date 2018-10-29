@@ -34,6 +34,8 @@
 #include "stm32f1xx_hal.h"
 #include "stm32f1xx.h"
 #include "stm32f1xx_it.h"
+#include "stm32f1xx_ll_exti.h"
+#include "Tasks/NRF24Task.h"
 #include "main.h"
 
 /* USER CODE BEGIN 0 */
@@ -195,7 +197,9 @@ void DebugMon_Handler(void)
 /* USER CODE BEGIN 1 */
 
 void EXTI2_IRQHandler(void) {
+#if SAT_Enable_NRF24
 	NRF24_RX_ISR();
+#endif
 	LL_EXTI_ClearFlag_0_31(LL_EXTI_LINE_2);
 }
 /* USER CODE END 1 */
