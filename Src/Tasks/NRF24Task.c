@@ -131,6 +131,10 @@ void vTransmitTask(void *pvParameters) {
 					(int32_t) (xSensorData.gyr[2] * 100000.0));
 			nRF24_TransmitPacket(nRF24_payload, 32);
 
+			memset((uint8_t *) nRF24_payload, '\0', 32); //Fill all the array space with zeros
+			sprintf((char *) nRF24_payload, "T %ld", xSensorData.temp);
+			nRF24_TransmitPacket(nRF24_payload, 32);
+
 			GPIOC->BRR = 1 << 13;
 
 			// Prepare the sensor for receiving the data while sleeping
