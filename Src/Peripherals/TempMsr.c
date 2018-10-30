@@ -12,20 +12,26 @@ volatile int32_t temp = 0;
 
 int32_t getTemp()
 {
-	sensorData = LL_ADC_REG_ReadConversionData12(ADC1);
-	temp = (int32_t)( ( (10 * V25 - 8 * sensorData) / (AVGSLOPE * 10) ) + 25 + BIAS);
-	//manufacturer's formula for determining the temperature in Celsius, adjusted for unit
-	//compliance and for minimizing errors due to possible floating-point operations
-	return sensorData;
+	if (!LL_ADC_IsCalibrationOnGoing(ADC1))  //is the ADC still calibrating?
+	{
+		LL_ADC_REG_StartConversionSWStart(ADC1);  //start the damn conversion!
+		sensorData = LL_ADC_REG_ReadConversionData12(ADC1);
+		temp = (int32_t)( ( (10 * V25 - 8 * sensorData) / (AVGSLOPE * 10) ) + 25 + BIAS);
+		//manufacturer's formula for determining the temperature in Celsius, adjusted for unit
+		//compliance and for minimizing errors due to possible floating-point operations
+		return temp;
+	}
+	return -300;   //error code - calibration is still ongoing
 }
 
 void ADC_TempMsr_Init()
 {
-	ADC_Config();
+	ADC_Config();  //setup the basic stuff (clocks, channels etc)
 
-	LL_ADC_Enable(ADC1);
+	LL_ADC_Enable(ADC1);   //enable the ADC
 
-	LL_ADC_StartCalibration(ADC1);
+	LL_ADC_StartCalibration(ADC1);   //start automatic calibration of the ADC
+
 }
 
 void ADC_Config()
@@ -52,6 +58,6 @@ void ADC_Config()
     /* Set ADC group regular sequence: channel on the selected sequence rank. */
     LL_ADC_REG_SetSequencerRanks(ADC1, LL_ADC_REG_RANK_1, LL_ADC_CHANNEL_TEMPSENSOR);
 
-    LL_ADC_SetChannelSamplingTime(ADC1, LL_ADC_CHANNEL_16, 91 * LL_ADC_SAMPLINGTIME_1CYCLE_5);
+    LL_ADC_SetChannelSamplingTime(ADC1, LL_ADC_CHANNEL_16, LL_ADC_SAMPLINGTIME_239CYCLES_5);
 }
 
