@@ -406,6 +406,9 @@ void prvGPSDMAMessageRX(char *pcRxMessage) {
 	else
 		xLen = DMA_RX_BUFFER_SIZE - xBufDataLen;
 
+	memcpy(pcRxMessage, cDMA_RX_Buffer, xLen);
+	pcRxMessage[xLen] = '\0';  // Append a null terminator
+
 	// Reset the flags in the DMA to prepare for the next transaction
 	LL_DMA_ClearFlag_GI3(LL_UART_DMA_HANDLE);
 	LL_DMA_ClearFlag_HT3(LL_UART_DMA_HANDLE);
@@ -416,9 +419,6 @@ void prvGPSDMAMessageRX(char *pcRxMessage) {
 	LL_DMA_SetDataLength(LL_UART_DMA_HANDLE, LL_UART_DMA_CHAN_RX_GPS,
 			(uint32_t)DMA_RX_BUFFER_SIZE);
 	LL_DMA_EnableChannel(LL_UART_DMA_HANDLE, LL_UART_DMA_CHAN_RX_GPS);
-
-	memcpy(pcRxMessage, cDMA_RX_Buffer, xLen);
-	pcRxMessage[xLen] = '\0';  // Append a null terminator
 }
 
 void DMA_GPS_TX_ISR(void) {
