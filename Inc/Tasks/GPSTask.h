@@ -65,7 +65,7 @@ extern TaskHandle_t xGPSMsgRXTask;
 extern void vSetupGPS(void);  // Initial setup of the USART, DMA and the message queue
 extern void vGPSTask(void *pvParameters);  // Main GPS task
 extern void vGPSMessageRXTask(void *pvParameters);
-extern void vRequestGPSData(int8_t nmeaCommand, char *commandString);
+extern void vRequestGPSData(int8_t cNmeaCommand);  // Provide any of the MINMEA_SENTENCE_XXX as the argument
 extern void vGPSDMAMessageTX(char *pcTxMessage);
 extern void osQueueGPSMessage(const char * format, ...);
 extern int8_t cGetGPSData(char *cSentence);

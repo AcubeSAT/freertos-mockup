@@ -264,7 +264,8 @@ void vGPSMessageRXTask(void *pvParameters) {
 	}
 }
 
-void vRequestGPSData(int8_t cNmeaCommand, char *pcCommandString) {
+void vRequestGPSData(int8_t cNmeaCommand) {
+	char pcCommandString[COMMAND_REQUEST_SIZE + 1] = {"\0"};
 	switch(cNmeaCommand) {
 		case MINMEA_SENTENCE_GGA:
 			sprintf(pcCommandString, "$CC%sQ,%s\r\n", "GP", "GGA");
