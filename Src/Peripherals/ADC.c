@@ -5,41 +5,48 @@
  *      Author: Grigoris Pavlakis <grigpavl@ece.auth.gr>
  */
 
-void ADC_TempMsr_Init()
+#include "Peripherals/ADC.h"
+
+void ADC_Init(ADC_TypeDef* ADC, enum ADC_UsageMode mode)
 {
-	ADC_Config();  //setup the basic stuff (clocks, channels etc)
+	/*Common settings for both ADCs*/
 
-	LL_ADC_Enable(ADC1);   //enable the ADC
+	if (ADC == ADC1) //find which ADC do we want to initialize and enable its clock
+	{
+	    LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_ADC1);
+	}
+	else
+	{
+	    LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_ADC2);
+	}
 
-	LL_ADC_StartCalibration(ADC1);   //start automatic calibration of the ADC
+	LL_ADC_REG_SetTriggerSource(ADC, LL_ADC_REG_TRIG_SOFTWARE);   //set the chosen ADC to software triggering mode
+    LL_ADC_REG_SetContinuousMode(ADC, LL_ADC_REG_CONV_SINGLE);    //enable continuous conversion
+    LL_ADC_REG_SetSequencerLength(ADC, LL_ADC_REG_SEQ_SCAN_DISABLE);  //disable sequencer scanning
 
-}
+    /*Usage-specific initialization settings*/
+	switch(mode)
+	{
+	    case TEMPMSR:
+	    	LL_ADC_SetCommonPathInternalCh(__LL_ADC_COMMON_INSTANCE(ADC), LL_ADC_PATH_INTERNAL_TEMPSENSOR);  //connect to temp. sensor
+	    	uint32_t wait_loop_index = 80;  //CPU cycles which correspond to ~10 us, suggested stabilization time for temp.sensor stabilization
 
-void ADC_Config()
-{
-	LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_ADC1);  //enable the clock for ADC1
+	    	while(wait_loop_index != 0)
+	    	{
+	    	    wait_loop_index--;
+	    	}
 
-    LL_ADC_SetCommonPathInternalCh(__LL_ADC_COMMON_INSTANCE(ADC1), LL_ADC_PATH_INTERNAL_TEMPSENSOR);
-    uint32_t wait_loop_index = 80;  //CPU cycles which correspond to ~10 us, suggested stabilization time for temp.sensor stabilization
+	        LL_ADC_REG_SetSequencerRanks(ADC, LL_ADC_REG_RANK_1, LL_ADC_CHANNEL_TEMPSENSOR);  //set sequencer rank to 1
+	        LL_ADC_SetChannelSamplingTime(ADC, LL_ADC_CHANNEL_16, LL_ADC_SAMPLINGTIME_239CYCLES_5);   //set sampling time for temp. sensing
+	    	break;
 
-    while(wait_loop_index != 0)
-    {
-    	wait_loop_index--;
-    }
+	    case BATLVL:   //WIP
+	    	break;
+	 }
 
-    /* Set ADC group regular trigger source */
-    LL_ADC_REG_SetTriggerSource(ADC1, LL_ADC_REG_TRIG_SOFTWARE);
+	LL_ADC_Enable(ADC);   //enable the ADC
+	LL_ADC_StartCalibration(ADC);   //start automatic calibration
 
-    /* Set ADC group regular continuous mode */
-    LL_ADC_REG_SetContinuousMode(ADC1, LL_ADC_REG_CONV_SINGLE);
-
-    /* Set ADC group regular sequencer length and scan direction */
-    LL_ADC_REG_SetSequencerLength(ADC1, LL_ADC_REG_SEQ_SCAN_DISABLE);
-
-    /* Set ADC group regular sequence: channel on the selected sequence rank. */
-    LL_ADC_REG_SetSequencerRanks(ADC1, LL_ADC_REG_RANK_1, LL_ADC_CHANNEL_TEMPSENSOR);
-
-    LL_ADC_SetChannelSamplingTime(ADC1, LL_ADC_CHANNEL_16, LL_ADC_SAMPLINGTIME_239CYCLES_5);
 }
 
 

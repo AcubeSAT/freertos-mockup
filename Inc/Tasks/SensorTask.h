@@ -6,6 +6,13 @@
 #include "event_groups.h"
 #include "semphr.h"
 
+/*
+ * Temperature sensor settings
+ */
+#define AVGSLOPE 4.3  //average slope of T-V chart according to datasheet pg 79
+#define V25      1430 //voltage of temperature sensor at 25C according to datasheet pg 79 (in mV)
+#define BIAS     0    //possible sensor bias due to manufacturing processes
+
 /**
  * Sensor data holder
  */

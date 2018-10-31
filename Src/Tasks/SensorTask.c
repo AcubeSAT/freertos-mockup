@@ -11,7 +11,7 @@
 #include "Tasks/SensorTask.h"
 #include "Tasks/UARTTask.h"
 
-#include "Peripherals/TempMsr.h"
+#include "Peripherals/ADC.h"
 
 SensorData_t xSensorData;
 SemaphoreHandle_t xI2CSemaphore;
@@ -72,9 +72,22 @@ void vMPU9250Task(void *pvParameters) {
 
 void vTempTask(void *pvParameters)
 {
+	int32_t sensorData = 0;  //raw ADC value
 	while(1)
 	{
-        xSensorData.temp = getTemp();  //continually update the appropriate variable inside the sensor data struct
+		if (!LL_ADC_IsCalibrationOnGoing(ADC1))  //is the ADC still calibrating?
+		{
+		    LL_ADC_REG_StartConversionSWStart(ADC1);  //start the damn conversion!
+			sensorData = LL_ADC_REG_ReadConversionData12(ADC1);
+			xSensorData.temp = (int32_t)( ( (10 * V25 - 8 * sensorData) / (AVGSLOPE * 10) ) + 25 + BIAS);
+			//manufacturer's formula for determining the temperature in Celsius, adjusted for unit
+			//compliance and for minimizing errors due to possible floating-point operations
+		}
+		else
+		{
+			xSensorData.temp = -300; //error value - calibration not finished
+		}
+
         vTaskDelay(pdMS_TO_TICKS(1000));   //1 second per measurement is enough
 	}
 }
@@ -90,6 +103,6 @@ void vSetupSensors() {
 
 	BH1750_Init(BH1750_CONTHRES); //I2C is already initialized above
 
-	ADC_TempMsr_Init();   //initialize ADC1 for temp. measurements
+	ADC_Init(ADC1, TEMPMSR);   //initialize ADC1 for temp. measurements
 }
 #endif
