@@ -20,12 +20,11 @@
 //voltage of temperature sensor at 25C according to datasheet pg 79 (in mV)
 //(min is 1340, max is 1520, default(1430): typical)
 
-#define BIAS 20
+#define BIAS 0
 //according to the manual (pg 235), due to mfg processes
 //there is an offset in the V(T) plot different
 //to every chip (up to +-45oC) that needs to be found.
-//(default is 0 so it MUST be calculated before any meaningful measurements
-//are made)
+//(default is 0)
 
 int32_t getTemp();  //returns current MCU temp. in Celsius
 void ADC_TempMsr_Init();  //initializes the ADC, this needs to be run in prvHardwareSetup()
