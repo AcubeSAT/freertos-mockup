@@ -215,7 +215,7 @@ void vTaskInfoTransmitTask(void *pvParameters) {
 			nRF24_CE_H();
 
 			xSemaphoreGive(xnRF24Semaphore);
-			vTaskDelay(pdMS_TO_TICKS(1000));
+			vTaskDelay(pdMS_TO_TICKS(5000));
 		}
 	}
 }
