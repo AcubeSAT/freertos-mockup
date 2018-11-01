@@ -9,7 +9,9 @@
 #ifndef INC_PERIPHERALS_ADC_H_
 #define INC_PERIPHERALS_ADC_H_
 
-enum ADC_UsageMode {TEMPMSR, BATLVL}; //the usage mode for which the ADC should be initialized
+enum ADC_UsageMode {TEMPMSR};
+//the usage mode for which the ADC should be initialized
+//(extend it with anything else)
 
 #include "stm32f1xx_ll_adc.h"
 #include "stm32f1xx_ll_bus.h"

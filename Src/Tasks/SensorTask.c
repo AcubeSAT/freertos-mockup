@@ -75,13 +75,15 @@ void vTempTask(void *pvParameters)
 	int32_t sensorData = 0;  //raw ADC value
 	while(1)
 	{
+	    LL_ADC_REG_StartConversionSWStart(ADC1);  //start the damn conversion!
+
 		if (!LL_ADC_IsCalibrationOnGoing(ADC1))  //is the ADC still calibrating?
 		{
-		    LL_ADC_REG_StartConversionSWStart(ADC1);  //start the damn conversion!
 			sensorData = LL_ADC_REG_ReadConversionData12(ADC1);
 			xSensorData.temp = (int32_t)( ( (10 * V25 - 8 * sensorData) / (AVGSLOPE * 10) ) + 25 + BIAS);
 			//manufacturer's formula for determining the temperature in Celsius, adjusted for unit
 			//compliance and for minimizing errors due to possible floating-point operations
+			//(we don't use floats because of their slow software implementation, and such precision is not needed)
 		}
 		else
 		{

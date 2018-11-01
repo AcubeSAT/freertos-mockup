@@ -39,9 +39,12 @@ void ADC_Init(ADC_TypeDef* ADC, enum ADC_UsageMode mode)
 	        LL_ADC_REG_SetSequencerRanks(ADC, LL_ADC_REG_RANK_1, LL_ADC_CHANNEL_TEMPSENSOR);  //set sequencer rank to 1
 	        LL_ADC_SetChannelSamplingTime(ADC, LL_ADC_CHANNEL_16, LL_ADC_SAMPLINGTIME_239CYCLES_5);   //set sampling time for temp. sensing
 	    	break;
+		    //if you want to use the ADC for your own purposes make sure to add it to the enum
+	    	//ADC_UsageMode in ADC.h and build a case for its initialization code (in low level please, to keep performance high)
+	    	//
 
-	    case BATLVL:   //WIP
-	    	break;
+	    //case <YOUR-CASE-HERE>:
+	    //	break;
 	 }
 
 	LL_ADC_Enable(ADC);   //enable the ADC
