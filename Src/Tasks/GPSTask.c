@@ -1,11 +1,11 @@
 #include "Tasks/GPSTask.h"
 
-#define DMA_RX_BUFFER_SIZE          MINMEA_MAX_LENGTH
+#define DMA_RX_BUFFER_SIZE          550
 #define COMMAND_REQUEST_SIZE		12
 
 // Private function prototypes
 void prvGPSDMAMessageTX(char *pcTxMessage);
-void prvGPSDMAMessageRX(char *pcRxMessage);
+void prvGPSDMAMessageRX(void);
 
 // Private variables
 char cDMA_RX_Buffer[DMA_RX_BUFFER_SIZE] = {"\0"};
@@ -104,45 +104,11 @@ void vSetupGPS(void) {
 	NVIC_EnableIRQ(DMA1_Channel2_IRQn);
 	/********************** GPS USART TX DMA **********************/
 
-	xGPSQueue = xQueueCreate(80, sizeof(GPSMessage_t *));  // Create the GPS queue
-}
-
-void osQueueGPSMessage(const char * format, ...)
-{
-	va_list arg;
-
-	GPSMessage_t pcGPSMessage = NULL;
-	char cMsgBuffer[GPS_MESSAGE_BUFFER_SIZE] = {"\0"};
-	int32_t lLenChars = 0;
-
-	va_start(arg, format);
-	lLenChars = vsnprintf(cMsgBuffer, GPS_MESSAGE_BUFFER_SIZE, format, arg);
-	va_end(arg);
-
-	if(lLenChars > 0)
-		pcGPSMessage = pvPortMalloc(lLenChars + 1);
-
-	if (pcGPSMessage == NULL)
-	{
-		UART_SendStr("ERROR! Not enough memory to store GPS string\r\n");
-	}
-	else
-	{
-		strcpy(pcGPSMessage, cMsgBuffer);
-
-		// TODO: Show a warning if the queue is full (e.g. replace the last
-		// message in the queue)
-		if (xQueueSend(xGPSQueue, (void* ) (&pcGPSMessage), (TickType_t ) 0) == pdFAIL)
-		{
-			// Make sure to deallocate the failed message
-			vPortFree(pcGPSMessage);
-		}
-	}
+	xGPSQueue = xQueueCreate(GPS_MESSAGE_BUFFER_SIZE, sizeof(GPSMessage_t *));  // Create the GPS queue
 }
 
 void vGPSTask(void *pvParameters) {
 	GPSMessage_t xSentence = NULL;
-	int8_t cGpsCode = 0;
 	char *pcTokSstr = NULL;
 
 	osQueueUARTMessage("GPS task started!.....\r\n");
@@ -150,9 +116,8 @@ void vGPSTask(void *pvParameters) {
 	while(1) {
 		if(xQueueReceive(xGPSQueue, &xSentence, portMAX_DELAY)) {
 			pcTokSstr = strtok(xSentence, "\r\n");
-			cGpsCode = cGetGPSData(pcTokSstr);
 			while(pcTokSstr) {
-				switch(cGpsCode) {
+				switch(cGetGPSData(pcTokSstr)) {
 					case MINMEA_SENTENCE_GGA: {
 						osQueueUARTMessage("*************** GGA ***************\r\n");
 						osQueueUARTMessage("Lat: %d\r\n", xGPSData.Latitude.value);
@@ -175,7 +140,7 @@ void vGPSTask(void *pvParameters) {
 					}
 					break;
 
-					case MINMEA_SENTENCE_GSA: {
+					/*case MINMEA_SENTENCE_GSA: {
 						osQueueUARTMessage("*************** GSA ***************\r\n");
 						osQueueUARTMessage("Fix type: %d\r\n", xGPSData.fix_type);
 						osQueueUARTMessage("Fix mode: %c\r\n", xGPSData.fix_mode);
@@ -184,9 +149,9 @@ void vGPSTask(void *pvParameters) {
 						osQueueUARTMessage("PDOP: %d\r\n", xGPSData.PDOP.value);
 						osQueueUARTMessage("***********************************\r\n\r\n");
 					}
-					break;
+					break;*/
 
-					case MINMEA_SENTENCE_GSV: {
+					/*case MINMEA_SENTENCE_GSV: {
 						osQueueUARTMessage("*************** GSV ***************\r\n");
 						osQueueUARTMessage("Total satellites: %d\r\n", xGPSData.total_sats);
 						osQueueUARTMessage("Total messages: %d\r\n", xGPSData.total_msgs);
@@ -201,7 +166,7 @@ void vGPSTask(void *pvParameters) {
 						}
 						osQueueUARTMessage("***********************************\r\n\r\n");
 					}
-					break;
+					break;*/
 
 					case MINMEA_SENTENCE_RMC: {
 						osQueueUARTMessage("*************** RMC ***************\r\n");
@@ -217,7 +182,7 @@ void vGPSTask(void *pvParameters) {
 					}
 					break;
 
-					case MINMEA_SENTENCE_VTG: {
+					/*case MINMEA_SENTENCE_VTG: {
 						osQueueUARTMessage("*************** VTG ***************\r\n");
 						osQueueUARTMessage("Speed (knots): %d\r\n", xGPSData.Speed_knots.value);
 						osQueueUARTMessage("Speed (km/h): %d\r\n", xGPSData.Speed_kph.value);
@@ -225,7 +190,7 @@ void vGPSTask(void *pvParameters) {
 						osQueueUARTMessage("True track (deg): %d\r\n", xGPSData.True_Track_Deg.value);
 						osQueueUARTMessage("***********************************\r\n");
 					}
-					break;
+					break;*/
 
 					case MINMEA_SENTENCE_ZDA: {
 						osQueueUARTMessage("*************** ZDA ***************\r\n");
@@ -255,11 +220,9 @@ void vGPSTask(void *pvParameters) {
 }
 
 void vGPSMessageRXTask(void *pvParameters) {
-	char cRXMessage[GPS_MESSAGE_BUFFER_SIZE];
 	while(1) {
 		if (ulTaskNotifyTake(pdFALSE, portMAX_DELAY)) {
-			prvGPSDMAMessageRX(cRXMessage);
-			osQueueGPSMessage("%s", cRXMessage);  // Transfer the message to the queue
+			prvGPSDMAMessageRX();
 		}
 	}
 }
@@ -397,17 +360,32 @@ void prvGPSDMAMessageTX(char *pcTxMessage) {
 	LL_DMA_EnableChannel(LL_UART_DMA_HANDLE, LL_UART_DMA_CHAN_TX_GPS);
 }
 
-void prvGPSDMAMessageRX(char *pcRxMessage) {
+void prvGPSDMAMessageRX(void) {
 	size_t xLen = 0;
 	size_t xBufDataLen = LL_DMA_GetDataLength(LL_UART_DMA_HANDLE, LL_UART_DMA_CHAN_RX_GPS);
+	GPSMessage_t *pcRxMessage = NULL;
 
 	if(xBufDataLen == DMA_RX_BUFFER_SIZE)
 		xLen = DMA_RX_BUFFER_SIZE;
 	else
 		xLen = DMA_RX_BUFFER_SIZE - xBufDataLen;
 
-	memcpy(pcRxMessage, cDMA_RX_Buffer, xLen);
-	pcRxMessage[xLen] = '\0';  // Append a null terminator
+	pcRxMessage = (char *)pvPortMalloc(xLen + 1);
+
+	if (pcRxMessage == NULL)
+	{
+		UART_SendStr("ERROR! Not enough memory to store GPS string\r\n");
+	}
+	else
+	{
+		strcpy(pcRxMessage, cDMA_RX_Buffer);
+		pcRxMessage[xLen] = '\0';  // Append a null terminator
+		if (xQueueSend(xGPSQueue, (void* ) (&pcRxMessage), (TickType_t ) 0) == pdFAIL)
+		{
+			// Make sure to deallocate the failed message
+			vPortFree(pcRxMessage);
+		}
+	}
 
 	// Reset the flags in the DMA to prepare for the next transaction
 	LL_DMA_ClearFlag_GI3(LL_UART_DMA_HANDLE);
