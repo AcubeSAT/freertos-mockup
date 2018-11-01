@@ -7,11 +7,14 @@
 /**
  * A task that periodically prints a heartbeat message via UART
  */
+
 void vCheckTask(void *pvParameters) {
 	uint8_t value = (uint8_t) pvParameters;
+	uint8_t *payl_addr = (uint8_t *)0x20002c7f;
 
 	for (;;) {
 		osQueueUARTMessage("%d SystemGood %d \r\n", value, xTaskGetTickCount());
+		osQueueUARTMessage("Var payload_length value: %d\r\n", *payl_addr);
 		//taskYIELD();
 		vTaskDelay(pdMS_TO_TICKS(1000));
 	}
