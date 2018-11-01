@@ -105,7 +105,6 @@ void vTransmitTask(void *pvParameters) {
 		pdTRUE, pdTRUE, portMAX_DELAY)) {
 			if (xSemaphoreTake(xnRF24Semaphore, pdMS_TO_TICKS(250)) == pdFALSE) {
 				UART_SendStr("FATAL Error: nRF24Transmit timeout");
-				vTaskSuspend(NULL); // Stop this task
 			} else {
 				nRF24_SetOperationalMode(nRF24_MODE_TX); //Set operational mode (PTX == transmitter)
 				nRF24_ClearIRQFlags(); //Clear any pending IRQ flags
@@ -153,7 +152,6 @@ void vReceiveTask(void *pvParameters) {
 		if (ulTaskNotifyTake(pdFALSE, portMAX_DELAY)) {
 			if (xSemaphoreTake(xnRF24Semaphore, pdMS_TO_TICKS(250)) == pdFALSE) {
 				UART_SendStr("FATAL Error: nRF24Receive timeout");
-				vTaskSuspend(NULL); // Stop this task
 			} else {
 				uint8_t payload_length; //Length of received payload
 				char* tokenCh = NULL; //Save the tokenized string
@@ -189,15 +187,14 @@ void vReceiveTask(void *pvParameters) {
 }
 
 void vTaskInfoTransmitTask(void *pvParameters) {
-	TaskStatus_t *buffer;
+	TaskStatus_t status[12];
 	UBaseType_t NumTasks;
 	while (1) {
 		if (xSemaphoreTake(xnRF24Semaphore, pdMS_TO_TICKS(250)) == pdFALSE) {
 			UART_SendStr("FATAL Error: nRF24Transmit timeout");
-			vTaskSuspend(NULL); // Stop this task
 		} else {
 			nRF24_SetOperationalMode(nRF24_MODE_TX); //Set operational mode (PTX == transmitter)
-			NumTasks = uxTaskGetSystemState(buffer, uxTaskGetNumberOfTasks(), NULL);
+			NumTasks = uxTaskGetSystemState(status, uxTaskGetNumberOfTasks(), NULL);
 			for (int i = 0; i < NumTasks; i++) {
 				if (i == 0) {
 					memset((uint8_t *) nRF24_payload, '\0', 32); //Fill all the array space with zero
@@ -205,8 +202,8 @@ void vTaskInfoTransmitTask(void *pvParameters) {
 					nRF24_TransmitPacket(nRF24_payload, 32);
 				}
 				memset((uint8_t *) nRF24_payload, '\0', 32); //Fill all the array space with zero
-				sprintf((char *) nRF24_payload, "%d%u%s", buffer[i].eCurrentState,
-						buffer[i].ulRunTimeCounter, buffer[i].pcTaskName); //
+				sprintf((char *) nRF24_payload, "%d%u%s", status[i].eCurrentState,
+						status[i].ulRunTimeCounter, status[i].pcTaskName); //
 				nRF24_TransmitPacket(nRF24_payload, 32);
 			}
 			memset((uint8_t *) nRF24_payload, '\0', 32); //Fill all the array space with zero
