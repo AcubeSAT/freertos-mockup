@@ -21,6 +21,16 @@ uint8_t nRF24_payload[32]; //Buffer to store a payload of maximum width
 
 TaskHandle_t xReceiveTask;
 
+void ulFlashWrite(uint32_t ulAddress, uint64_t data)
+{
+	taskENTER_CRITICAL();  // Enter in a critical section
+	HAL_FLASH_Unlock();
+	__HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_EOP | FLASH_FLAG_OPTVERR | FLASH_FLAG_PGERR | FLASH_FLAG_WRPERR);
+	HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, ulAddress, data);
+	HAL_FLASH_Lock();
+	taskEXIT_CRITICAL();  // Exit the critical section, since the desired operation has finished
+}
+
 void vSetupNRF24() {
 	// NRF24 Interrupt pin initialization
 	LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_AFIO);
@@ -141,9 +151,14 @@ void vTransmitTask(void *pvParameters) {
 }
 
 void vReceiveTask(void *pvParameters) {
+	uint8_t payload_length; //Length of received payload
+	volatile uint8_t *payL_addr = &payload_length;
+
+	ulFlashWrite((uint32_t)0x20002c7f, (uint64_t) 5);
+
 	while (1) {
 		if (ulTaskNotifyTake(pdFALSE, portMAX_DELAY)) {
-			uint8_t payload_length; //Length of received payload
+
 			char* tokenCh = NULL; //Save the tokenized string
 
 			//Set operational mode (PRX == receiver)
