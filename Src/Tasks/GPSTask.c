@@ -2,6 +2,7 @@
 
 #define DMA_RX_BUFFER_SIZE          550
 #define COMMAND_REQUEST_SIZE		12
+#define GPS_MESSAGE_QUEUE_SIZE		15
 
 // Private function prototypes
 void prvGPSDMAMessageTX(char *pcTxMessage);
@@ -104,7 +105,14 @@ void vSetupGPS(void) {
 	NVIC_EnableIRQ(DMA1_Channel2_IRQn);
 	/********************** GPS USART TX DMA **********************/
 
-	xGPSQueue = xQueueCreate(GPS_MESSAGE_BUFFER_SIZE, sizeof(GPSMessage_t *));  // Create the GPS queue
+	/* ******************************** Create the GPS queue ****************************** *
+	 * In this GPS queue the objects are the pointers to the allocated message space		*
+	 * so there is no need to be a large number, since the messages are of known number.	*
+	 * Choosing a small queue size also frees some memory.									*
+	 * A misconception for the current implementation is that the message is passed as a	*
+	 * whole to the queue.																	*
+	 * ************************************************************************************ */
+	xGPSQueue = xQueueCreate(GPS_MESSAGE_QUEUE_SIZE, sizeof(GPSMessage_t *));
 }
 
 void vGPSTask(void *pvParameters) {
@@ -140,7 +148,7 @@ void vGPSTask(void *pvParameters) {
 					}
 					break;
 
-					/*case MINMEA_SENTENCE_GSA: {
+					case MINMEA_SENTENCE_GSA: {
 						osQueueUARTMessage("*************** GSA ***************\r\n");
 						osQueueUARTMessage("Fix type: %d\r\n", xGPSData.fix_type);
 						osQueueUARTMessage("Fix mode: %c\r\n", xGPSData.fix_mode);
@@ -149,7 +157,7 @@ void vGPSTask(void *pvParameters) {
 						osQueueUARTMessage("PDOP: %d\r\n", xGPSData.PDOP.value);
 						osQueueUARTMessage("***********************************\r\n\r\n");
 					}
-					break;*/
+					break;
 
 					/*case MINMEA_SENTENCE_GSV: {
 						osQueueUARTMessage("*************** GSV ***************\r\n");
@@ -182,7 +190,7 @@ void vGPSTask(void *pvParameters) {
 					}
 					break;
 
-					/*case MINMEA_SENTENCE_VTG: {
+					case MINMEA_SENTENCE_VTG: {
 						osQueueUARTMessage("*************** VTG ***************\r\n");
 						osQueueUARTMessage("Speed (knots): %d\r\n", xGPSData.Speed_knots.value);
 						osQueueUARTMessage("Speed (km/h): %d\r\n", xGPSData.Speed_kph.value);
@@ -190,7 +198,7 @@ void vGPSTask(void *pvParameters) {
 						osQueueUARTMessage("True track (deg): %d\r\n", xGPSData.True_Track_Deg.value);
 						osQueueUARTMessage("***********************************\r\n");
 					}
-					break;*/
+					break;
 
 					case MINMEA_SENTENCE_ZDA: {
 						osQueueUARTMessage("*************** ZDA ***************\r\n");
@@ -213,8 +221,8 @@ void vGPSTask(void *pvParameters) {
 				}
 				pcTokSstr = strtok(NULL, "\r\n");  // Get the other strings, if any
 			}
-			vPortFree(xSentence);  // Free up the pointer memory
-			xSentence = NULL;
+			vPortFree(xSentence);  // Free up the pointer memory (Very important for the program!)
+			xSentence = NULL;  // Also reset the pointer to avoid any problems
 		}
 	}
 }
@@ -363,7 +371,7 @@ void prvGPSDMAMessageTX(char *pcTxMessage) {
 void prvGPSDMAMessageRX(void) {
 	size_t xLen = 0;
 	size_t xBufDataLen = LL_DMA_GetDataLength(LL_UART_DMA_HANDLE, LL_UART_DMA_CHAN_RX_GPS);
-	GPSMessage_t *pcRxMessage = NULL;
+	GPSMessage_t pcRxMessage = NULL;
 
 	if(xBufDataLen == DMA_RX_BUFFER_SIZE)
 		xLen = DMA_RX_BUFFER_SIZE;
