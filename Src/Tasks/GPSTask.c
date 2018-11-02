@@ -153,7 +153,7 @@ void vGPSTask(void *pvParameters) {
 						osQueueUARTMessage("Fix type: %d\r\n", xGPSData.fix_type);
 						osQueueUARTMessage("Fix mode: %c\r\n", xGPSData.fix_mode);
 						osQueueUARTMessage("HDOP: %d\r\n", xGPSData.HDOP.value);
-						osQueueUARTMessage("VDOP: %d:%d:%d.%d\r\n", xGPSData.VDOP.value);
+						osQueueUARTMessage("VDOP: %d\r\n", xGPSData.VDOP.value);
 						osQueueUARTMessage("PDOP: %d\r\n", xGPSData.PDOP.value);
 						osQueueUARTMessage("***********************************\r\n\r\n");
 					}
