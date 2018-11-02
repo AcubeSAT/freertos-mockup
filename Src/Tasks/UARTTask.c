@@ -9,6 +9,7 @@
 
 #define LL_UART_DMA_CHAN_TX __LL_DMA_GET_CHANNEL(UART_DMA_CHAN_TX)
 #define LL_DMA_IsActive
+#define UART_QUEUE_SIZE		85
 
 DMA_HandleTypeDef dma;
 
@@ -50,7 +51,7 @@ void osQueueUARTMessage(const char * format, ...) {
 	va_end(arg);
 
 	//configASSERT(strlen(message) < 127);
-
+	volatile size_t lenn = strlen(buffer);
 	UARTMessage_t pcUARTMessage = pvPortMalloc(strlen(buffer) + 1);
 
 	if (pcUARTMessage == NULL) {
@@ -72,7 +73,7 @@ void vSetupUART() {
 	UART_Init(9600); //Initialize the UART with the set baud rate
 	UART_SendStr("CubeSAT hardware initialization...\r\n");
 
-	// DMA (Direct Memory Access) initialisation
+	// DMA (Direct Memory Access) initialization
 	__HAL_RCC_DMA1_CLK_ENABLE();
 	dma.Instance = UART_DMA_CHAN_TX; // DMA channel for UART
 	dma.Init.Direction = DMA_MEMORY_TO_PERIPH; // Transfer data from memory to peripheral
@@ -89,6 +90,8 @@ void vSetupUART() {
 
 	NVIC_SetPriority(DMA1_Channel4_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 12, 0));
 	NVIC_EnableIRQ(DMA1_Channel4_IRQn);
+
+	xUARTQueue = xQueueCreate(UART_QUEUE_SIZE, sizeof(UARTMessage_t *));
 }
 
 void DMA_UART_TX_ISR(void){
