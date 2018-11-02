@@ -25,9 +25,6 @@
 #define UART_BAUDRATE_GPS					(uint32_t)9600
 #define UART_PORT_GPS						USART3
 
-#define GPS_MESSAGE_BUFFER_SIZE				128
-
-
 #if SAT_Enable_GPS
 
 typedef struct
@@ -67,7 +64,6 @@ extern void vGPSTask(void *pvParameters);  // Main GPS task
 extern void vGPSMessageRXTask(void *pvParameters);
 extern void vRequestGPSData(int8_t cNmeaCommand);  // Provide any of the MINMEA_SENTENCE_XXX as the argument
 extern void vGPSDMAMessageTX(char *pcTxMessage);
-extern void osQueueGPSMessage(const char * format, ...);
 extern int8_t cGetGPSData(char *cSentence);
 
 extern void DMA_GPS_TX_ISR(void);
