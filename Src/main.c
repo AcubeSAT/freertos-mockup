@@ -37,7 +37,7 @@ int main(void) {
 	xI2CSemaphore = xSemaphoreCreateMutex();
 	xDataEventGroup = xEventGroupCreate();
 
-	xTaskCreate(vCheckTask, "Check", 250, (void*) 1, 1, NULL);
+	//xTaskCreate(vCheckTask, "Check", 250, (void*) 1, 1, NULL);
 	//xTaskCreate(vCheckTask, "Check", 250, (void*) 2, 8, NULL);
 #if SAT_Enable_Sensors
 	xTaskCreate(vMPU9250Task, "MPU9250", 400, NULL, 4, NULL);
@@ -46,7 +46,7 @@ int main(void) {
 
 	xTaskCreate(vUARTTask, "UART", 300, NULL, 3, &xUARTTaskHandle);
 	xTaskCreate(vRefreshWWDGTask, "RefreshWWDG", 200, NULL, 6, NULL);
-	xTaskCreate(vBlinkyTask, "Blinking", 300, NULL, 3, NULL);
+	//xTaskCreate(vBlinkyTask, "Blinking", 300, NULL, 3, NULL);
 
 #if SAT_Enable_NRF24
 	xTaskCreate(vTransmitTask, "NRF_TX", 600, NULL, 1, NULL);
@@ -57,8 +57,6 @@ int main(void) {
 	xTaskCreate(vGPSMessageRXTask, "GPS_Msg_RX", 400, NULL, 3, &xGPSMsgRXTask);
 	xTaskCreate(vGPSTask, "GPS_Main", 400, NULL, 4, NULL);
 #endif
-
-	xUARTQueue = xQueueCreate(45, sizeof(UARTMessage_t *));
 
 	osQueueUARTMessage("Hello world %d from FreeRTOS\r\n", xTaskGetTickCount());
 	vSetupWWDG();
