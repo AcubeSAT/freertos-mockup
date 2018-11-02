@@ -128,9 +128,9 @@ void vGPSTask(void *pvParameters) {
 				switch(cGetGPSData(pcTokSstr)) {
 					case MINMEA_SENTENCE_GGA: {
 						osQueueUARTMessage("*************** GGA ***************\r\n");
-						osQueueUARTMessage("Lat: %d\r\n", xGPSData.Latitude.value);
-						osQueueUARTMessage("Lon: %d\r\n", xGPSData.Longitude.value);
-						osQueueUARTMessage("HDOP: %d\r\n", xGPSData.HDOP.value);
+						osQueueUARTMessage("Lat: %f\r\n", minmea_tocoord(&xGPSData.Latitude));
+						osQueueUARTMessage("Lon: %f\r\n", minmea_tocoord(&xGPSData.Longitude));
+						osQueueUARTMessage("HDOP: %f\r\n", minmea_tofloat(&xGPSData.HDOP));
 						osQueueUARTMessage("Time: %d:%d:%d.%d\r\n", xGPSData.Time.hours,
 								xGPSData.Time.minutes, xGPSData.Time.seconds, xGPSData.Time.microseconds);
 						osQueueUARTMessage("Fix quality: %d\r\n", xGPSData.fix_quality);
@@ -140,8 +140,8 @@ void vGPSTask(void *pvParameters) {
 
 					case MINMEA_SENTENCE_GLL: {
 						osQueueUARTMessage("*************** GLL ***************\r\n");
-						osQueueUARTMessage("Lat: %d\r\n", xGPSData.Latitude.value);
-						osQueueUARTMessage("Lon: %d\r\n", xGPSData.Longitude.value);
+						osQueueUARTMessage("Lat: %f\r\n", minmea_tocoord(&xGPSData.Latitude));
+						osQueueUARTMessage("Lon: %f\r\n", minmea_tocoord(&xGPSData.Longitude));
 						osQueueUARTMessage("Time: %d:%d:%d.%d\r\n", xGPSData.Time.hours,
 								xGPSData.Time.minutes, xGPSData.Time.seconds, xGPSData.Time.microseconds);
 						osQueueUARTMessage("***********************************\r\n\r\n");
@@ -152,9 +152,9 @@ void vGPSTask(void *pvParameters) {
 						osQueueUARTMessage("*************** GSA ***************\r\n");
 						osQueueUARTMessage("Fix type: %d\r\n", xGPSData.fix_type);
 						osQueueUARTMessage("Fix mode: %c\r\n", xGPSData.fix_mode);
-						osQueueUARTMessage("HDOP: %d\r\n", xGPSData.HDOP.value);
-						osQueueUARTMessage("VDOP: %d\r\n", xGPSData.VDOP.value);
-						osQueueUARTMessage("PDOP: %d\r\n", xGPSData.PDOP.value);
+						osQueueUARTMessage("HDOP: %f\r\n", minmea_tofloat(&xGPSData.HDOP));
+						osQueueUARTMessage("VDOP: %f\r\n", minmea_tofloat(&xGPSData.VDOP));
+						osQueueUARTMessage("PDOP: %f\r\n", minmea_tofloat(&xGPSData.PDOP));
 						osQueueUARTMessage("***********************************\r\n\r\n");
 					}
 					break;
@@ -178,24 +178,24 @@ void vGPSTask(void *pvParameters) {
 
 					case MINMEA_SENTENCE_RMC: {
 						osQueueUARTMessage("*************** RMC ***************\r\n");
-						osQueueUARTMessage("Lat: %d\r\n", xGPSData.Latitude.value);
-						osQueueUARTMessage("Lon: %d\r\n", xGPSData.Longitude.value);
+						osQueueUARTMessage("Lat: %f\r\n", minmea_tocoord(&xGPSData.Latitude));
+						osQueueUARTMessage("Lon: %f\r\n", minmea_tocoord(&xGPSData.Longitude));
 						osQueueUARTMessage("Date: %d/%d/%d\r\n", xGPSData.Date.day,
 								xGPSData.Date.month, xGPSData.Date.year);
 						osQueueUARTMessage("Time: %d:%d:%d.%d\r\n", xGPSData.Time.hours,
 								xGPSData.Time.minutes, xGPSData.Time.seconds, xGPSData.Time.microseconds);
-						osQueueUARTMessage("Speed: %d\r\n", xGPSData.Speed.value);
-						osQueueUARTMessage("Course: %d\r\n", xGPSData.Course.value);
+						osQueueUARTMessage("Speed: %f\r\n", minmea_tofloat(&xGPSData.Speed));
+						osQueueUARTMessage("Course: %f\r\n", minmea_tofloat(&xGPSData.Course));
 						osQueueUARTMessage("***********************************\r\n");
 					}
 					break;
 
 					case MINMEA_SENTENCE_VTG: {
 						osQueueUARTMessage("*************** VTG ***************\r\n");
-						osQueueUARTMessage("Speed (knots): %d\r\n", xGPSData.Speed_knots.value);
-						osQueueUARTMessage("Speed (km/h): %d\r\n", xGPSData.Speed_kph.value);
-						osQueueUARTMessage("Magnetic track (deg): %d\r\n", xGPSData.Mag_Track_Deg.value);
-						osQueueUARTMessage("True track (deg): %d\r\n", xGPSData.True_Track_Deg.value);
+						osQueueUARTMessage("Speed (knots): %f\r\n", minmea_tofloat(&xGPSData.Speed_knots));
+						osQueueUARTMessage("Speed (km/h): %f\r\n", minmea_tofloat(&xGPSData.Speed_kph));
+						osQueueUARTMessage("Magnetic track (deg): %f\r\n", minmea_tofloat(&xGPSData.Mag_Track_Deg));
+						osQueueUARTMessage("True track (deg): %f\r\n", minmea_tofloat(&xGPSData.True_Track_Deg));
 						osQueueUARTMessage("***********************************\r\n");
 					}
 					break;
