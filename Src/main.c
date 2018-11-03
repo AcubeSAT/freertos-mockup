@@ -50,9 +50,9 @@ int main(void) {
 	//xTaskCreate(vBlinkyTask, "Blinking", 200, NULL, 3, NULL);
 
 #if SAT_Enable_NRF24
-	xTaskCreate(vTransmitTask, "NRF_TX", 250, NULL, 2, NULL);
-	xTaskCreate(vReceiveTask, "NRF_RX", 250, NULL, 2, &xReceiveTask);
- 	xTaskCreate(vTaskInfoTransmitTask, "NRF_TX_TaskInfo", 400, NULL, 1, NULL);
+	xTaskCreate(vTransmitTask, "NRF_TX", 250, NULL, 1, NULL);
+	xTaskCreate(vReceiveTask, "NRF_RX", 250, NULL, 1, &xReceiveTask);
+ 	xTaskCreate(vTaskInfoTransmitTask, "NRF_TX_TaskInfo", 400, NULL, 2, NULL);
  	xnRF24Semaphore = xSemaphoreCreateMutex();
 #endif
 
