@@ -1,5 +1,7 @@
 #include "Tasks/GPSTask.h"
 
+#if SAT_Enable_GPS
+
 #define DMA_RX_BUFFER_SIZE          550
 #define COMMAND_REQUEST_SIZE		12
 #define GPS_MESSAGE_QUEUE_SIZE		15
@@ -128,9 +130,9 @@ void vGPSTask(void *pvParameters) {
 				switch(cGetGPSData(pcTokSstr)) {
 					case MINMEA_SENTENCE_GGA: {
 						osQueueUARTMessage("*************** GGA ***************\r\n");
-						osQueueUARTMessage("Lat: %f\r\n", minmea_tocoord(&xGPSData.Latitude));
-						osQueueUARTMessage("Lon: %f\r\n", minmea_tocoord(&xGPSData.Longitude));
-						osQueueUARTMessage("HDOP: %f\r\n", minmea_tofloat(&xGPSData.HDOP));
+						osQueueUARTMessage("Lat: %f\r\n", xGPSData.Latitude);
+						osQueueUARTMessage("Lon: %f\r\n", xGPSData.Longitude);
+						osQueueUARTMessage("HDOP: %f\r\n", xGPSData.HDOP);
 						osQueueUARTMessage("Time: %d:%d:%d.%d\r\n", xGPSData.Time.hours,
 								xGPSData.Time.minutes, xGPSData.Time.seconds, xGPSData.Time.microseconds);
 						osQueueUARTMessage("Fix quality: %d\r\n", xGPSData.fix_quality);
@@ -140,8 +142,8 @@ void vGPSTask(void *pvParameters) {
 
 					case MINMEA_SENTENCE_GLL: {
 						osQueueUARTMessage("*************** GLL ***************\r\n");
-						osQueueUARTMessage("Lat: %f\r\n", minmea_tocoord(&xGPSData.Latitude));
-						osQueueUARTMessage("Lon: %f\r\n", minmea_tocoord(&xGPSData.Longitude));
+						osQueueUARTMessage("Lat: %f\r\n", xGPSData.Latitude);
+						osQueueUARTMessage("Lon: %f\r\n", xGPSData.Longitude);
 						osQueueUARTMessage("Time: %d:%d:%d.%d\r\n", xGPSData.Time.hours,
 								xGPSData.Time.minutes, xGPSData.Time.seconds, xGPSData.Time.microseconds);
 						osQueueUARTMessage("***********************************\r\n\r\n");
@@ -152,9 +154,9 @@ void vGPSTask(void *pvParameters) {
 						osQueueUARTMessage("*************** GSA ***************\r\n");
 						osQueueUARTMessage("Fix type: %d\r\n", xGPSData.fix_type);
 						osQueueUARTMessage("Fix mode: %c\r\n", xGPSData.fix_mode);
-						osQueueUARTMessage("HDOP: %f\r\n", minmea_tofloat(&xGPSData.HDOP));
-						osQueueUARTMessage("VDOP: %f\r\n", minmea_tofloat(&xGPSData.VDOP));
-						osQueueUARTMessage("PDOP: %f\r\n", minmea_tofloat(&xGPSData.PDOP));
+						osQueueUARTMessage("HDOP: %f\r\n", xGPSData.HDOP);
+						osQueueUARTMessage("VDOP: %f\r\n", xGPSData.VDOP);
+						osQueueUARTMessage("PDOP: %f\r\n", xGPSData.PDOP);
 						osQueueUARTMessage("***********************************\r\n\r\n");
 					}
 					break;
@@ -178,24 +180,24 @@ void vGPSTask(void *pvParameters) {
 
 					case MINMEA_SENTENCE_RMC: {
 						osQueueUARTMessage("*************** RMC ***************\r\n");
-						osQueueUARTMessage("Lat: %f\r\n", minmea_tocoord(&xGPSData.Latitude));
-						osQueueUARTMessage("Lon: %f\r\n", minmea_tocoord(&xGPSData.Longitude));
+						osQueueUARTMessage("Lat: %f\r\n", xGPSData.Latitude);
+						osQueueUARTMessage("Lon: %f\r\n", xGPSData.Longitude);
 						osQueueUARTMessage("Date: %d/%d/%d\r\n", xGPSData.Date.day,
 								xGPSData.Date.month, xGPSData.Date.year);
 						osQueueUARTMessage("Time: %d:%d:%d.%d\r\n", xGPSData.Time.hours,
 								xGPSData.Time.minutes, xGPSData.Time.seconds, xGPSData.Time.microseconds);
-						osQueueUARTMessage("Speed: %f\r\n", minmea_tofloat(&xGPSData.Speed));
-						osQueueUARTMessage("Course: %f\r\n", minmea_tofloat(&xGPSData.Course));
+						osQueueUARTMessage("Speed: %f\r\n", xGPSData.Speed);
+						osQueueUARTMessage("Course: %f\r\n", xGPSData.Course);
 						osQueueUARTMessage("***********************************\r\n");
 					}
 					break;
 
 					case MINMEA_SENTENCE_VTG: {
 						osQueueUARTMessage("*************** VTG ***************\r\n");
-						osQueueUARTMessage("Speed (knots): %f\r\n", minmea_tofloat(&xGPSData.Speed_knots));
-						osQueueUARTMessage("Speed (km/h): %f\r\n", minmea_tofloat(&xGPSData.Speed_kph));
-						osQueueUARTMessage("Magnetic track (deg): %f\r\n", minmea_tofloat(&xGPSData.Mag_Track_Deg));
-						osQueueUARTMessage("True track (deg): %f\r\n", minmea_tofloat(&xGPSData.True_Track_Deg));
+						osQueueUARTMessage("Speed (knots): %f\r\n", xGPSData.Speed_knots);
+						osQueueUARTMessage("Speed (km/h): %f\r\n", xGPSData.Speed_kph);
+						osQueueUARTMessage("Magnetic track (deg): %f\r\n", xGPSData.Mag_Track_Deg);
+						osQueueUARTMessage("True track (deg): %f\r\n", xGPSData.True_Track_Deg);
 						osQueueUARTMessage("***********************************\r\n");
 					}
 					break;
@@ -275,11 +277,11 @@ int8_t cGetGPSData(char *cSentence) {
 		case MINMEA_SENTENCE_GGA: {
 			struct minmea_sentence_gga frame;
 			if(minmea_parse_gga(&frame, cSentence)) {
-				xGPSData.Latitude = frame.latitude;
-				xGPSData.Longitude = frame.longitude;
+				xGPSData.Latitude = minmea_tocoord(&frame.latitude);
+				xGPSData.Longitude = minmea_tocoord(&frame.longitude);
 				xGPSData.Time = frame.time;
 				xGPSData.fix_quality = frame.fix_quality;
-				xGPSData.HDOP = frame.hdop;
+				xGPSData.HDOP = minmea_tofloat(&frame.hdop);
 			}
 		}
 		break;
@@ -287,8 +289,8 @@ int8_t cGetGPSData(char *cSentence) {
 		case MINMEA_SENTENCE_GLL: {
 			struct minmea_sentence_gll frame;
 			if(minmea_parse_gll(&frame, cSentence)) {
-				xGPSData.Latitude = frame.latitude;
-				xGPSData.Longitude = frame.longitude;
+				xGPSData.Latitude = minmea_tocoord(&frame.latitude);
+				xGPSData.Longitude = minmea_tocoord(&frame.longitude);
 				xGPSData.Time = frame.time;
 			}
 		}
@@ -299,9 +301,9 @@ int8_t cGetGPSData(char *cSentence) {
 			if(minmea_parse_gsa(&frame, cSentence)) {
 				xGPSData.fix_type = frame.fix_type;
 				xGPSData.fix_mode = frame.mode;
-				xGPSData.PDOP = frame.pdop;
-				xGPSData.HDOP = frame.hdop;
-				xGPSData.VDOP = frame.vdop;
+				xGPSData.PDOP = minmea_tofloat(&frame.pdop);
+				xGPSData.HDOP = minmea_tofloat(&frame.hdop);
+				xGPSData.VDOP = minmea_tofloat(&frame.vdop);
 			}
 		}
 		break;
@@ -323,12 +325,12 @@ int8_t cGetGPSData(char *cSentence) {
 		case MINMEA_SENTENCE_RMC: {
 			struct minmea_sentence_rmc frame;
 			if(minmea_parse_rmc(&frame, cSentence)) {
-				xGPSData.Latitude = frame.latitude;
-				xGPSData.Longitude = frame.longitude;
+				xGPSData.Latitude = minmea_tocoord(&frame.latitude);
+				xGPSData.Longitude = minmea_tocoord(&frame.longitude);
 				xGPSData.Date = frame.date;
 				xGPSData.Time = frame.time;
-				xGPSData.Speed = frame.speed;
-				xGPSData.Course = frame.course;
+				xGPSData.Speed = minmea_tofloat(&frame.speed);
+				xGPSData.Course = minmea_tofloat(&frame.course);
 			}
 		}
 		break;
@@ -336,10 +338,10 @@ int8_t cGetGPSData(char *cSentence) {
 		case MINMEA_SENTENCE_VTG: {
 			struct minmea_sentence_vtg frame;
 			if(minmea_parse_vtg(&frame, cSentence)) {
-				xGPSData.Speed_knots = frame.speed_knots;
-				xGPSData.Speed_kph = frame.speed_kph;
-				xGPSData.Mag_Track_Deg = frame.magnetic_track_degrees;
-				xGPSData.True_Track_Deg = frame.true_track_degrees;
+				xGPSData.Speed_knots = minmea_tofloat(&frame.speed_knots);
+				xGPSData.Speed_kph = minmea_tofloat(&frame.speed_kph);
+				xGPSData.Mag_Track_Deg = minmea_tofloat(&frame.magnetic_track_degrees);
+				xGPSData.True_Track_Deg = minmea_tofloat(&frame.true_track_degrees);
 			}
 		}
 		break;
@@ -421,3 +423,5 @@ void DMA_GPS_RX_ISR(void) {
 	vTaskNotifyGiveFromISR(xGPSMsgRXTask, &xHigherPriorityTaskWoken);
 	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
+#endif
+

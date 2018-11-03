@@ -29,17 +29,17 @@
 
 typedef struct
 {
-	struct minmea_float Latitude;
-	struct minmea_float Longitude;
-	struct minmea_float Speed;
-	struct minmea_float Speed_knots;
-	struct minmea_float Speed_kph;
-	struct minmea_float Course;
-	struct minmea_float Mag_Track_Deg;
-	struct minmea_float True_Track_Deg;
-	struct minmea_float PDOP;
-	struct minmea_float HDOP;
-	struct minmea_float VDOP;
+	float Latitude;
+	float Longitude;
+	float Speed;
+	float Speed_knots;
+	float Speed_kph;
+	float Course;
+	float Mag_Track_Deg;
+	float True_Track_Deg;
+	float PDOP;
+	float HDOP;
+	float VDOP;
 	struct minmea_date Date;
 	struct minmea_time Time;
 
