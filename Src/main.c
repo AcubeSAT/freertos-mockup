@@ -45,7 +45,7 @@ int main(void) {
 	xTaskCreate(vBH1750Task, "BH1750", 400, NULL, 4, NULL);
 #endif
 
-	xTaskCreate(vUARTTask, "UART", 300, NULL, 3, NULL);
+	xTaskCreate(vUARTTask, "UART", 300, NULL, 3, &xUARTTaskHandle);
 	xTaskCreate(vRefreshWWDGTask, "RefreshWWDG", 100, NULL, 6, NULL);
 	xTaskCreate(vBlinkyTask, "Blinking", 200, NULL, 3, NULL);
 
