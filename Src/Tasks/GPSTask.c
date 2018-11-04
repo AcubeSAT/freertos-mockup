@@ -206,7 +206,6 @@ int8_t cGetGPSData(char *cSentence) {
 						xGPSData.Time.minutes, xGPSData.Time.seconds, xGPSData.Time.microseconds);
 				osQueueUARTMessage("Fix quality: %d\r\n", xGPSData.fix_quality);
 				osQueueUARTMessage("***********************************\r\n\r\n");
-
 			}
 		}
 		break;
@@ -223,7 +222,6 @@ int8_t cGetGPSData(char *cSentence) {
 				osQueueUARTMessage("Time: %d:%d:%d.%d\r\n", xGPSData.Time.hours,
 						xGPSData.Time.minutes, xGPSData.Time.seconds, xGPSData.Time.microseconds);
 				osQueueUARTMessage("***********************************\r\n\r\n");
-
 			}
 		}
 		break;
@@ -243,7 +241,6 @@ int8_t cGetGPSData(char *cSentence) {
 				osQueueUARTMessage("VDOP: %f\r\n", xGPSData.VDOP);
 				osQueueUARTMessage("PDOP: %f\r\n", xGPSData.PDOP);
 				osQueueUARTMessage("***********************************\r\n\r\n");
-
 			}
 		}
 		break;
@@ -281,7 +278,6 @@ int8_t cGetGPSData(char *cSentence) {
 				osQueueUARTMessage("Speed: %f\r\n", xGPSData.Speed);
 				osQueueUARTMessage("Course: %f\r\n", xGPSData.Course);
 				osQueueUARTMessage("***********************************\r\n\r\n");
-
 			}
 		}
 		break;
@@ -299,7 +295,6 @@ int8_t cGetGPSData(char *cSentence) {
 				osQueueUARTMessage("Magnetic track (deg): %f\r\n", xGPSData.Mag_Track_Deg);
 				osQueueUARTMessage("True track (deg): %f\r\n", xGPSData.True_Track_Deg);
 				osQueueUARTMessage("***********************************\r\n");
-
 			}
 		}
 		break;
