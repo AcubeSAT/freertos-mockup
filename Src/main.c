@@ -57,7 +57,7 @@ int main(void) {
 #endif
 
 #if SAT_Enable_GPS
-	xTaskCreate(vGPSMessageRXTask, "GPS_Msg_RX", 200, NULL, 3, &xGPSMsgRXTask);
+	xTaskCreate(vGPSMessageRXTask, "GPS_Msg_RX", 350, NULL, 3, &xGPSMsgRXTask);
 	xTaskCreate(vGPSTask, "GPS_Main", 200, NULL, 3, &xGPSTaskHandle);
 #endif
 
