@@ -20,7 +20,7 @@
 
 #if SAT_Enable_NRF24
 volatile uint8_t stopRX = 0; //Logic variable to indicate the stopping of the RX
-uint8_t nRF24_payload[32]; //Buffer to store a payload of maximum width
+uint8_t nRF24_payload[32] = {"\0"}; //Buffer to store a payload of maximum width
 
 TaskHandle_t xReceiveTask;
 SemaphoreHandle_t xnRF24Semaphore;
@@ -99,7 +99,6 @@ void vSetupNRF24() {
 
 void vTransmitTask(void *pvParameters) {
 	nRF24_SetOperationalMode(nRF24_MODE_TX); //Set operational mode (PTX == transmitter)
-	memset((void  *) nRF24_payload, '\0', 32); //Fill all the array space with zeros
 	sprintf((char *) nRF24_payload, "%s", "S0");
 	nRF24_TransmitPacket(nRF24_payload, 32);
 
@@ -113,7 +112,7 @@ void vTransmitTask(void *pvParameters) {
 				nRF24_SetOperationalMode(nRF24_MODE_TX); //Set operational mode (PTX == transmitter)
 				nRF24_ClearIRQFlags(); //Clear any pending IRQ flags
 				GPIOC->BSRR = 1 << 13;
-				memset((void  *) nRF24_payload, '\0', 32); //Fill all the array space with zeros
+
 				sprintf((char *) nRF24_payload, "B%.2f", xSensorData.brightness);
 				nRF24_TransmitPacket(nRF24_payload, 32);
 
@@ -121,19 +120,16 @@ void vTransmitTask(void *pvParameters) {
 				 sprintf((char *)nRF24_payload, "B%.2f %.2f %.2f %.2f", q0, q1, q2, q3);
 				 nRF24_TransmitPacket(nRF24_payload, 32);*/
 
-				memset((void  *) nRF24_payload, '\0', 32); //Fill all the array space with zeros
 				sprintf((char *) nRF24_payload, "X%ld %ld",
 						(int32_t) (xSensorData.acc[0] * 100000.0),
 						(int32_t) (xSensorData.gyr[0] * 100000.0));
 				nRF24_TransmitPacket(nRF24_payload, 32);
 
-				memset((void  *) nRF24_payload, '\0', 32); //Fill all the array space with zeros
 				sprintf((char *) nRF24_payload, "Y%ld %ld",
 						(int32_t) (xSensorData.acc[1] * 100000.0),
 						(int32_t) (xSensorData.gyr[1] * 100000.0));
 				nRF24_TransmitPacket(nRF24_payload, 32);
 
-				memset((void  *) nRF24_payload, '\0', 32); //Fill all the array space with zeros
 				sprintf((char *) nRF24_payload, "Z%ld %ld",
 						(int32_t) (xSensorData.acc[2] * 100000.0),
 						(int32_t) (xSensorData.gyr[2] * 100000.0));
@@ -205,16 +201,13 @@ void vTaskInfoTransmitTask(void *pvParameters) {
 			NumTasks = uxTaskGetSystemState(status, uxTaskGetNumberOfTasks(), NULL);
 			for (int i = 0; i < NumTasks; i++) {
 				if (i == 0) {
-					memset((void  *) nRF24_payload, '\0', 32); //Fill all the array space with zero
 					sprintf((char *) nRF24_payload, "%s", "{T");
 					nRF24_TransmitPacket(nRF24_payload, 32);
 				}
-				memset((uint8_t *) nRF24_payload, '\0', 32); //Fill all the array space with zero
 				sprintf((char *) nRF24_payload, "%d%lu%s", status[i].eCurrentState,
 						status[i].ulRunTimeCounter, status[i].pcTaskName); //
 				nRF24_TransmitPacket(nRF24_payload, 32);
 			}
-			memset((void  *) nRF24_payload, '\0', 32); //Fill all the array space with zero
 			sprintf((char *) nRF24_payload, "%s", "}T");
 			nRF24_TransmitPacket(nRF24_payload, 32);
 
