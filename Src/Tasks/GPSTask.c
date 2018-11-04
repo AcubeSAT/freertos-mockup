@@ -274,6 +274,9 @@ void prvGPSDMAMessageRX(void) {
 				osQueueUARTMessage("Invalid NMEA sentence provided....\r\n");
 				osQueueUARTMessage("Sentence: %s\r\n", pcTokSstr);
 				break;
+			case -10:
+				osQueueUARTMessage("NMEA sentence error....\r\n");
+				break;
 		}
 		pcTokSstr = strtok(NULL, "\r\n");  // Get the other strings, if any
 	}
