@@ -57,8 +57,8 @@ int main(void) {
 #endif
 
 #if SAT_Enable_GPS
-	xTaskCreate(vGPSMessageRXTask, "GPS_Msg_RX", 100, NULL, 3, &xGPSMsgRXTask);
-	xTaskCreate(vGPSTask, "GPS_Main", 250, NULL, 4, NULL);
+	xTaskCreate(vGPSMessageRXTask, "GPS_Msg_RX", 250, NULL, 3, &xGPSMsgRXTask);
+	//xTaskCreate(vGPSTask, "GPS_Main", 100, NULL, 4, NULL);
 #endif
 
 	osQueueUARTMessage("Hello world %d from FreeRTOS\r\n", xTaskGetTickCount());
