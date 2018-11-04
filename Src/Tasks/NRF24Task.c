@@ -175,11 +175,14 @@ void vReceiveTask(void *pvParameters) {
 						} else if (strstr(tokenCh, "0")) {
 							osQueueUARTMessage("->>  Received  0 command\r\n");
 							vBlinkyFadeOut();
-						} else if (strstr(tokenCh, "GP-Lat")){
-							osQueueUARTMessage("->>  Received GPS command\r\n");
-							xTaskNotifyGive(xGPSTaskHandle);
 						} else {
 							osQueueUARTMessage("->>  Received content: %s", nRF24_payload);
+						}
+					} else if (strstr(tokenCh, "GPS")) {
+						tokenCh = strtok(NULL, ":"); // Tokenize the string
+						if (strstr(tokenCh, "Data")) {
+							osQueueUARTMessage("->>  Received GPS command\r\n");
+							xTaskNotifyGive(xGPSTaskHandle);
 						}
 					}
 				}
