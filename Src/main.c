@@ -26,6 +26,7 @@
 #include "Tasks/TraceTask.h"
 #include "Tasks/UARTTask.h"
 #include "Tasks/WWDGTask.h"
+#include "Tasks/RTCTask.h"
 
 void prvSetupHardware();
 
@@ -46,6 +47,7 @@ int main(void) {
 	xTaskCreate(vUARTTask, "UART", 300, NULL, 3, NULL);
 	xTaskCreate(vRefreshWWDGTask, "RefreshWWDG", 200, NULL, 6, NULL);
 	xTaskCreate(vBlinkyTask, "Blinking", 300, NULL, 3, NULL);
+	xTaskCreate(vRTCTask, "RTC", 100, NULL, 3, NULL);
 
 #if SAT_Enable_NRF24
 	xTaskCreate(vTransmitTask, "NRF_TX", 600, NULL, 1, NULL);
@@ -61,11 +63,17 @@ int main(void) {
 
 void prvClkConfig() {
 	/* Set FLASH latency */
+	/* How many clock cycles should SYSCLK to access flash memory */
 	LL_FLASH_SetLatency(LL_FLASH_LATENCY_2);
 
 	/* Enable HSE oscillator */
 	LL_RCC_HSE_Enable();
 	while (LL_RCC_HSE_IsReady() != 1) {
+	};
+
+	/* Enable LSE oscillator */
+	LL_RCC_LSE_Enable();
+	while (LL_RCC_LSE_IsReady() != 1) {
 	};
 
 	/* Main PLL configuration and activation */
