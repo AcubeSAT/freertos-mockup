@@ -15,6 +15,7 @@ char cDMA_TX_Buffer[COMMAND_REQUEST_SIZE + 1];
 
 // Task handle
 TaskHandle_t xGPSMsgRXTask;
+TaskHandle_t xGPSTaskHandle;
 GPSData_t xGPSData;
 
 LL_DMA_InitTypeDef dma_usart_rx;  // Define the DMA structure for RX
@@ -107,11 +108,40 @@ void vSetupGPS(void) {
 }
 
 void vGPSTask(void *pvParameters) {
+	char cRF24Msg[32] = {"\0"};
 
 	osQueueUARTMessage("GPS task started!.....\r\n");
 
 	while(1) {
+		if (ulTaskNotifyTake(pdFALSE, portMAX_DELAY)) {
+			if (xSemaphoreTake(xnRF24Semaphore, pdMS_TO_TICKS(250))) {
+				nRF24_SetOperationalMode(nRF24_MODE_TX);
+				nRF24_ClearIRQFlags();
 
+				sprintf(cRF24Msg, "Time: %d:%d:%d", xGPSData.Time.hours,
+						xGPSData.Time.minutes, xGPSData.Time.seconds);
+				nRF24_TransmitPacket((uint8_t *)cRF24Msg, 32);
+
+				sprintf(cRF24Msg, "Date: %d/%d/%d", xGPSData.Date.day,
+						xGPSData.Date.month, xGPSData.Date.year);
+				nRF24_TransmitPacket((uint8_t *)cRF24Msg, 32);
+
+				sprintf(cRF24Msg, "Lat: %.4f", xGPSData.Latitude);
+				nRF24_TransmitPacket((uint8_t *)cRF24Msg, 32);
+
+				sprintf(cRF24Msg, "Lon: %.4f", xGPSData.Longitude);
+				nRF24_TransmitPacket((uint8_t *)cRF24Msg, 32);
+
+				sprintf(cRF24Msg, "Speed: %.2f km/h", xGPSData.Speed);
+				nRF24_TransmitPacket((uint8_t *)cRF24Msg, 32);
+
+				nRF24_SetOperationalMode(nRF24_MODE_RX);
+				nRF24_CE_H();
+
+				nRF24_FlushTX();
+				xSemaphoreGive(xnRF24Semaphore);
+			}
+		}
 	}
 }
 
