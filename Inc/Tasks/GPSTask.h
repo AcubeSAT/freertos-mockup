@@ -13,7 +13,9 @@
 
 #include "Peripherals/uart.h"
 #include "Tasks/UARTTask.h"
+#include "Tasks/NRF24Task.h"
 #include "MockupConfig.h"
+#include "nrf24.h"
 
 #include "FreeRTOS.h"
 #include "queue.h"
@@ -58,6 +60,7 @@ typedef struct
 typedef char * GPSMessage_t;
 extern GPSData_t xGPSData;
 extern TaskHandle_t xGPSMsgRXTask;
+extern TaskHandle_t xGPSTaskHandle;
 
 extern void vSetupGPS(void);  // Initial setup of the USART, DMA and the message queue
 extern void vGPSTask(void *pvParameters);  // Main GPS task
