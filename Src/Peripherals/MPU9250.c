@@ -150,7 +150,7 @@ void MPU9250Calibration(float *gyroCalib)
 	int32_t gyro_bias[3]  = {0, 0, 0};
 	uint16_t numSamp = 50;
 
-	uint8_t temp[6];
+	//uint8_t temp[6];
 
   //Reset device by writing 1 to bit 7 (Reset bit)
   TWIWriteByte(MPU9250_ADDR, PWR_MGMT_1, 0x80);

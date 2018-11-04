@@ -51,7 +51,6 @@ void osQueueUARTMessage(const char * format, ...) {
 	va_end(arg);
 
 	//configASSERT(strlen(message) < 127);
-	volatile size_t lenn = strlen(buffer);
 	UARTMessage_t pcUARTMessage = pvPortMalloc(strlen(buffer) + 1);
 
 	if (pcUARTMessage == NULL) {
