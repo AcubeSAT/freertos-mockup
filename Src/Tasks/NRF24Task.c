@@ -25,7 +25,6 @@ uint8_t nRF24_payload[32]; //Buffer to store a payload of maximum width
 TaskHandle_t xReceiveTask;
 SemaphoreHandle_t xnRF24Semaphore;
 
-void prvSendGPSData(void);
 
 void vSetupNRF24() {
 	// NRF24 Interrupt pin initialization
@@ -146,6 +145,7 @@ void vTransmitTask(void *pvParameters) {
 				nRF24_SetOperationalMode(nRF24_MODE_RX); //Set operational mode (PRX == receiver)
 				nRF24_CE_H();
 
+				nRF24_FlushTX();
 				xSemaphoreGive(xnRF24Semaphore);
 			}
 		}
@@ -180,14 +180,14 @@ void vReceiveTask(void *pvParameters) {
 							osQueueUARTMessage("->>  Received  0 command\r\n");
 							vBlinkyFadeOut();
 						} else if (strstr(tokenCh, "GP-Lat")){
-							prvSendGPSData();
 							osQueueUARTMessage("->>  Received GPS command\r\n");
+							xTaskNotifyGive(xGPSTaskHandle);
 						} else {
 							osQueueUARTMessage("->>  Received content: %s", nRF24_payload);
 						}
 					}
 				}
-
+				nRF24_FlushRX();
 				xSemaphoreGive(xnRF24Semaphore);
 			}
 		}
@@ -222,41 +222,11 @@ void vTaskInfoTransmitTask(void *pvParameters) {
 			nRF24_SetOperationalMode(nRF24_MODE_RX); //Set operational mode (PRX == receiver)
 			nRF24_CE_H();
 
+			nRF24_FlushTX();
 			xSemaphoreGive(xnRF24Semaphore);
 			vTaskDelay(pdMS_TO_TICKS(5000));
 		}
 	}
-}
-
-void prvSendGPSData(void)
-{
-	nRF24_SetOperationalMode(nRF24_MODE_TX);
-	nRF24_ClearIRQFlags();
-
-	memset((void  *) nRF24_payload, '\0', 32); //Fill all the array space with zeros
-	sprintf((char *) nRF24_payload, "Time: %d:%d:%d", xGPSData.Time.hours,
-			xGPSData.Time.minutes, xGPSData.Time.seconds);
-	nRF24_TransmitPacket(nRF24_payload, 32);
-
-	memset((void  *) nRF24_payload, '\0', 32); //Fill all the array space with zeros
-	sprintf((char *) nRF24_payload, "Date: %d/%d/%d", xGPSData.Date.day,
-			xGPSData.Date.month, xGPSData.Date.year);
-	nRF24_TransmitPacket(nRF24_payload, 32);
-
-	memset((void  *) nRF24_payload, '\0', 32); //Fill all the array space with zeros
-	sprintf((char *) nRF24_payload, "Lat: %.4f", xGPSData.Latitude);
-	nRF24_TransmitPacket(nRF24_payload, 32);
-
-	memset((void  *) nRF24_payload, '\0', 32); //Fill all the array space with zeros
-	sprintf((char *) nRF24_payload, "Lon: %.4f", xGPSData.Longitude);
-	nRF24_TransmitPacket(nRF24_payload, 32);
-
-	memset((void  *) nRF24_payload, '\0', 32); //Fill all the array space with zeros
-	sprintf((char *) nRF24_payload, "Speed: %.2f km/h", xGPSData.Speed);
-	nRF24_TransmitPacket(nRF24_payload, 32);
-
-	nRF24_SetOperationalMode(nRF24_MODE_RX);
-	nRF24_CE_H();
 }
 
 void NRF24_RX_ISR(void) {
