@@ -4,7 +4,6 @@
 
 #define DMA_RX_BUFFER_SIZE          550
 #define COMMAND_REQUEST_SIZE		12
-#define GPS_MESSAGE_QUEUE_SIZE		15
 
 // Private function prototypes
 void prvGPSDMAMessageTX(char *pcTxMessage);
@@ -16,7 +15,6 @@ char cDMA_TX_Buffer[COMMAND_REQUEST_SIZE + 1];
 
 // Task handle
 TaskHandle_t xGPSMsgRXTask;
-QueueHandle_t xGPSQueue;
 GPSData_t xGPSData;
 
 LL_DMA_InitTypeDef dma_usart_rx;  // Define the DMA structure for RX
@@ -106,126 +104,14 @@ void vSetupGPS(void) {
 			NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 13, 0));
 	NVIC_EnableIRQ(DMA1_Channel2_IRQn);
 	/********************** GPS USART TX DMA **********************/
-
-	/* ******************************** Create the GPS queue ****************************** *
-	 * In this GPS queue the objects are the pointers to the allocated message space		*
-	 * so there is no need to be a large number, since the messages are of known number.	*
-	 * Choosing a small queue size also frees some memory.									*
-	 * A misconception for the current implementation is that the message is passed as a	*
-	 * whole to the queue.																	*
-	 * ************************************************************************************ */
-	xGPSQueue = xQueueCreate(GPS_MESSAGE_QUEUE_SIZE, sizeof(GPSMessage_t *));
 }
 
 void vGPSTask(void *pvParameters) {
-	GPSMessage_t xSentence = NULL;
-	char *pcTokSstr = NULL;
 
 	osQueueUARTMessage("GPS task started!.....\r\n");
 
 	while(1) {
-		if(xQueueReceive(xGPSQueue, &xSentence, portMAX_DELAY)) {
-			pcTokSstr = strtok(xSentence, "\r\n");
-			while(pcTokSstr) {
-				switch(cGetGPSData(pcTokSstr)) {
-					case MINMEA_SENTENCE_GGA: {
-						osQueueUARTMessage("*************** GGA ***************\r\n");
-						osQueueUARTMessage("Lat: %f\r\n", xGPSData.Latitude);
-						osQueueUARTMessage("Lon: %f\r\n", xGPSData.Longitude);
-						osQueueUARTMessage("HDOP: %f\r\n", xGPSData.HDOP);
-						osQueueUARTMessage("Time: %d:%d:%d.%d\r\n", xGPSData.Time.hours,
-								xGPSData.Time.minutes, xGPSData.Time.seconds, xGPSData.Time.microseconds);
-						osQueueUARTMessage("Fix quality: %d\r\n", xGPSData.fix_quality);
-						osQueueUARTMessage("***********************************\r\n\r\n");
-					}
-					break;
 
-					case MINMEA_SENTENCE_GLL: {
-						osQueueUARTMessage("*************** GLL ***************\r\n");
-						osQueueUARTMessage("Lat: %f\r\n", xGPSData.Latitude);
-						osQueueUARTMessage("Lon: %f\r\n", xGPSData.Longitude);
-						osQueueUARTMessage("Time: %d:%d:%d.%d\r\n", xGPSData.Time.hours,
-								xGPSData.Time.minutes, xGPSData.Time.seconds, xGPSData.Time.microseconds);
-						osQueueUARTMessage("***********************************\r\n\r\n");
-					}
-					break;
-
-					case MINMEA_SENTENCE_GSA: {
-						osQueueUARTMessage("*************** GSA ***************\r\n");
-						osQueueUARTMessage("Fix type: %d\r\n", xGPSData.fix_type);
-						osQueueUARTMessage("Fix mode: %c\r\n", xGPSData.fix_mode);
-						osQueueUARTMessage("HDOP: %f\r\n", xGPSData.HDOP);
-						osQueueUARTMessage("VDOP: %f\r\n", xGPSData.VDOP);
-						osQueueUARTMessage("PDOP: %f\r\n", xGPSData.PDOP);
-						osQueueUARTMessage("***********************************\r\n\r\n");
-					}
-					break;
-
-					/*case MINMEA_SENTENCE_GSV: {
-						osQueueUARTMessage("*************** GSV ***************\r\n");
-						osQueueUARTMessage("Total satellites: %d\r\n", xGPSData.total_sats);
-						osQueueUARTMessage("Total messages: %d\r\n", xGPSData.total_msgs);
-						osQueueUARTMessage("Message number: %d\r\n", xGPSData.msg_nr);
-
-						for(size_t counter = 0; counter < 4; counter++) {
-							osQueueUARTMessage("\r\nSatellite %d:\r\n", counter);
-							osQueueUARTMessage("SNR: %d\r\n", xGPSData.sats[counter].snr);
-							osQueueUARTMessage("Number: %d\r\n", xGPSData.sats[counter].nr);
-							osQueueUARTMessage("Azimuth: %d\r\n", xGPSData.sats[counter].azimuth);
-							osQueueUARTMessage("Elevation: %d\r\n", xGPSData.sats[counter].elevation);
-						}
-						osQueueUARTMessage("***********************************\r\n\r\n");
-					}
-					break;*/
-
-					case MINMEA_SENTENCE_RMC: {
-						osQueueUARTMessage("*************** RMC ***************\r\n");
-						osQueueUARTMessage("Lat: %f\r\n", xGPSData.Latitude);
-						osQueueUARTMessage("Lon: %f\r\n", xGPSData.Longitude);
-						osQueueUARTMessage("Date: %d/%d/%d\r\n", xGPSData.Date.day,
-								xGPSData.Date.month, xGPSData.Date.year);
-						osQueueUARTMessage("Time: %d:%d:%d.%d\r\n", xGPSData.Time.hours,
-								xGPSData.Time.minutes, xGPSData.Time.seconds, xGPSData.Time.microseconds);
-						osQueueUARTMessage("Speed: %f\r\n", xGPSData.Speed);
-						osQueueUARTMessage("Course: %f\r\n", xGPSData.Course);
-						osQueueUARTMessage("***********************************\r\n");
-					}
-					break;
-
-					case MINMEA_SENTENCE_VTG: {
-						osQueueUARTMessage("*************** VTG ***************\r\n");
-						osQueueUARTMessage("Speed (knots): %f\r\n", xGPSData.Speed_knots);
-						osQueueUARTMessage("Speed (km/h): %f\r\n", xGPSData.Speed_kph);
-						osQueueUARTMessage("Magnetic track (deg): %f\r\n", xGPSData.Mag_Track_Deg);
-						osQueueUARTMessage("True track (deg): %f\r\n", xGPSData.True_Track_Deg);
-						osQueueUARTMessage("***********************************\r\n");
-					}
-					break;
-
-					case MINMEA_SENTENCE_ZDA: {
-						osQueueUARTMessage("*************** ZDA ***************\r\n");
-						osQueueUARTMessage("Date: %d/%d/%d\r\n", xGPSData.Date.day,
-								xGPSData.Date.month, xGPSData.Date.year);
-						osQueueUARTMessage("Time: %d:%d:%d.%d\r\n", xGPSData.Time.hours,
-								xGPSData.Time.minutes, xGPSData.Time.seconds, xGPSData.Time.microseconds);
-						osQueueUARTMessage("***********************************\r\n");
-					}
-					break;
-
-					case MINMEA_INVALID:
-						osQueueUARTMessage("Invalid NMEA sentence provided....\r\n");
-						osQueueUARTMessage("Sentence: %s\r\n", pcTokSstr);
-						break;
-
-					default:
-						osQueueUARTMessage("NMEA sentence error....\r\n");
-						break;
-				}
-				pcTokSstr = strtok(NULL, "\r\n");  // Get the other strings, if any
-			}
-			vPortFree(xSentence);  // Free up the pointer memory (Very important for the program!)
-			xSentence = NULL;  // Also reset the pointer to avoid any problems
-		}
 	}
 }
 
@@ -373,28 +259,23 @@ void prvGPSDMAMessageTX(char *pcTxMessage) {
 void prvGPSDMAMessageRX(void) {
 	size_t xLen = 0;
 	size_t xBufDataLen = LL_DMA_GetDataLength(LL_UART_DMA_HANDLE, LL_UART_DMA_CHAN_RX_GPS);
-	GPSMessage_t pcRxMessage = NULL;
+	char *pcTokSstr = NULL;
 
 	if(xBufDataLen == DMA_RX_BUFFER_SIZE)
 		xLen = DMA_RX_BUFFER_SIZE;
 	else
 		xLen = DMA_RX_BUFFER_SIZE - xBufDataLen;
+	cDMA_RX_Buffer[xLen] = '\0';  // Append a null terminator
 
-	pcRxMessage = (char *)pvPortMalloc(xLen + 1);
-
-	if (pcRxMessage == NULL)
-	{
-		UART_SendStr("ERROR! Not enough memory to store GPS string\r\n");
-	}
-	else
-	{
-		strcpy(pcRxMessage, cDMA_RX_Buffer);
-		pcRxMessage[xLen] = '\0';  // Append a null terminator
-		if (xQueueSend(xGPSQueue, (void* ) (&pcRxMessage), (TickType_t ) 0) == pdFAIL)
-		{
-			// Make sure to deallocate the failed message
-			vPortFree(pcRxMessage);
+	pcTokSstr = strtok(cDMA_RX_Buffer, "\r\n");
+	while(pcTokSstr) {
+		switch(cGetGPSData(pcTokSstr)) {
+			case MINMEA_INVALID:
+				osQueueUARTMessage("Invalid NMEA sentence provided....\r\n");
+				osQueueUARTMessage("Sentence: %s\r\n", pcTokSstr);
+				break;
 		}
+		pcTokSstr = strtok(NULL, "\r\n");  // Get the other strings, if any
 	}
 
 	// Reset the flags in the DMA to prepare for the next transaction
