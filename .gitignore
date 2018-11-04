@@ -42,6 +42,7 @@
 .settings/
 .mxproject
 /Debug/
+core
 
 # Generated files
 Inc/version.h
