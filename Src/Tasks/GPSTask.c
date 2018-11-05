@@ -294,7 +294,7 @@ int8_t cGetGPSData(char *cSentence) {
 				osQueueUARTMessage("Speed (km/h): %f\r\n", xGPSData.Speed_kph);
 				osQueueUARTMessage("Magnetic track (deg): %f\r\n", xGPSData.Mag_Track_Deg);
 				osQueueUARTMessage("True track (deg): %f\r\n", xGPSData.True_Track_Deg);
-				osQueueUARTMessage("***********************************\r\n");
+				osQueueUARTMessage("***********************************\r\n\r\n");
 			}
 		}
 		break;
@@ -343,6 +343,7 @@ void prvGPSDMAMessageRX(void) {
 				break;
 			case -10:
 				osQueueUARTMessage("NMEA sentence error....\r\n");
+				osQueueUARTMessage("Sentence: %s\r\n", pcTokSstr);
 				break;
 		}
 		pcTokSstr = strtok(NULL, "\r\n");  // Get the other strings, if any
