@@ -110,7 +110,9 @@ void vSetupGPS(void) {
 void vGPSTask(void *pvParameters) {
 	char cRF24Msg[32] = {"\0"};
 
+#if GPS_DEBUGGING_MSGS
 	osQueueUARTMessage("GPS task started!.....\r\n");
+#endif
 
 	while(1) {
 		if (ulTaskNotifyTake(pdFALSE, portMAX_DELAY)) {
@@ -156,6 +158,7 @@ void vGPSMessageRXTask(void *pvParameters) {
 void vRequestGPSData(int8_t cNmeaCommand) {
 	char pcCommandString[COMMAND_REQUEST_SIZE + 1] = {"\0"};
 	switch(cNmeaCommand) {
+		// TODO: Probably checksum generation is needed
 		case MINMEA_SENTENCE_GGA:
 			sprintf(pcCommandString, "$CC%sQ,%s\r\n", "GP", "GGA");
 			break;
@@ -198,6 +201,8 @@ int8_t cGetGPSData(char *cSentence) {
 				xGPSData.Time = frame.time;
 				xGPSData.fix_quality = frame.fix_quality;
 				xGPSData.HDOP = minmea_tofloat(&frame.hdop);
+
+#if GPS_DEBUGGING_MSGS
 				osQueueUARTMessage("*************** GGA ***************\r\n");
 				osQueueUARTMessage("Lat: %f\r\n", xGPSData.Latitude);
 				osQueueUARTMessage("Lon: %f\r\n", xGPSData.Longitude);
@@ -206,6 +211,7 @@ int8_t cGetGPSData(char *cSentence) {
 						xGPSData.Time.minutes, xGPSData.Time.seconds, xGPSData.Time.microseconds);
 				osQueueUARTMessage("Fix quality: %d\r\n", xGPSData.fix_quality);
 				osQueueUARTMessage("***********************************\r\n\r\n");
+#endif
 			}
 		}
 		break;
@@ -216,12 +222,15 @@ int8_t cGetGPSData(char *cSentence) {
 				xGPSData.Latitude = minmea_tocoord(&frame.latitude);
 				xGPSData.Longitude = minmea_tocoord(&frame.longitude);
 				xGPSData.Time = frame.time;
+
+#if GPS_DEBUGGING_MSGS
 				osQueueUARTMessage("*************** GLL ***************\r\n");
 				osQueueUARTMessage("Lat: %f\r\n", xGPSData.Latitude);
 				osQueueUARTMessage("Lon: %f\r\n", xGPSData.Longitude);
 				osQueueUARTMessage("Time: %d:%d:%d.%d\r\n", xGPSData.Time.hours,
 						xGPSData.Time.minutes, xGPSData.Time.seconds, xGPSData.Time.microseconds);
 				osQueueUARTMessage("***********************************\r\n\r\n");
+#endif
 			}
 		}
 		break;
@@ -234,6 +243,8 @@ int8_t cGetGPSData(char *cSentence) {
 				xGPSData.PDOP = minmea_tofloat(&frame.pdop);
 				xGPSData.HDOP = minmea_tofloat(&frame.hdop);
 				xGPSData.VDOP = minmea_tofloat(&frame.vdop);
+
+#if GPS_DEBUGGING_MSGS
 				osQueueUARTMessage("*************** GSA ***************\r\n");
 				osQueueUARTMessage("Fix type: %d\r\n", xGPSData.fix_type);
 				osQueueUARTMessage("Fix mode: %c\r\n", xGPSData.fix_mode);
@@ -241,6 +252,7 @@ int8_t cGetGPSData(char *cSentence) {
 				osQueueUARTMessage("VDOP: %f\r\n", xGPSData.VDOP);
 				osQueueUARTMessage("PDOP: %f\r\n", xGPSData.PDOP);
 				osQueueUARTMessage("***********************************\r\n\r\n");
+#endif
 			}
 		}
 		break;
@@ -268,6 +280,8 @@ int8_t cGetGPSData(char *cSentence) {
 				xGPSData.Time = frame.time;
 				xGPSData.Speed = minmea_tofloat(&frame.speed);
 				xGPSData.Course = minmea_tofloat(&frame.course);
+
+#if GPS_DEBUGGING_MSGS
 				osQueueUARTMessage("*************** RMC ***************\r\n");
 				osQueueUARTMessage("Lat: %f\r\n", xGPSData.Latitude);
 				osQueueUARTMessage("Lon: %f\r\n", xGPSData.Longitude);
@@ -278,6 +292,7 @@ int8_t cGetGPSData(char *cSentence) {
 				osQueueUARTMessage("Speed: %f\r\n", xGPSData.Speed);
 				osQueueUARTMessage("Course: %f\r\n", xGPSData.Course);
 				osQueueUARTMessage("***********************************\r\n\r\n");
+#endif
 			}
 		}
 		break;
@@ -289,12 +304,15 @@ int8_t cGetGPSData(char *cSentence) {
 				xGPSData.Speed_kph = minmea_tofloat(&frame.speed_kph);
 				xGPSData.Mag_Track_Deg = minmea_tofloat(&frame.magnetic_track_degrees);
 				xGPSData.True_Track_Deg = minmea_tofloat(&frame.true_track_degrees);
+
+#if GPS_DEBUGGING_MSGS
 				osQueueUARTMessage("*************** VTG ***************\r\n");
 				osQueueUARTMessage("Speed (knots): %f\r\n", xGPSData.Speed_knots);
 				osQueueUARTMessage("Speed (km/h): %f\r\n", xGPSData.Speed_kph);
 				osQueueUARTMessage("Magnetic track (deg): %f\r\n", xGPSData.Mag_Track_Deg);
 				osQueueUARTMessage("True track (deg): %f\r\n", xGPSData.True_Track_Deg);
 				osQueueUARTMessage("***********************************\r\n\r\n");
+#endif
 			}
 		}
 		break;
@@ -337,6 +355,7 @@ void prvGPSDMAMessageRX(void) {
 	pcTokSstr = strtok(cDMA_RX_Buffer, "\r\n");
 	while(pcTokSstr) {
 		switch(cGetGPSData(pcTokSstr)) {
+			// TODO: Log the following messages instead of just outputting through USART
 			case MINMEA_INVALID:
 				osQueueUARTMessage("Invalid NMEA sentence provided....\r\n");
 				osQueueUARTMessage("Sentence: %s\r\n", pcTokSstr);

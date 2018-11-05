@@ -27,6 +27,8 @@
 #define UART_BAUDRATE_GPS					(uint32_t)9600
 #define UART_PORT_GPS						USART3
 
+#define GPS_DEBUGGING_MSGS					1
+
 #if SAT_Enable_GPS
 
 typedef struct
