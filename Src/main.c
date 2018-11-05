@@ -57,6 +57,7 @@ int main(void) {
 	xUARTQueue = xQueueCreate(45, sizeof(UARTMessage_t *));
 
 	osQueueUARTMessage("Hello world %d from FreeRTOS\r\n", xTaskGetTickCount());
+	osQueueUARTMessage("Compiled at " __DATE__ " " __TIME__ "\r\n");
 	vSetupWWDG();
 	vTaskStartScheduler();
 }
