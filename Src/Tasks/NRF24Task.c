@@ -20,7 +20,7 @@ volatile uint8_t stopRX = 0; //Logic variable to indicate the stopping of the RX
 uint8_t nRF24_payload[32]; //Buffer to store a payload of maximum width
 
 TaskHandle_t xReceiveTask;
-SemaphoreHandle_t xnRF24Semaphore;
+TaskHandle_t xTransmitTask;
 
 void vSetupNRF24() {
 	// NRF24 Interrupt pin initialization
@@ -44,7 +44,8 @@ void vSetupNRF24() {
 	LL_GPIO_SetPinMode(GPIOA, LL_GPIO_PIN_2, LL_GPIO_MODE_FLOATING);
 
 	/* EXTI interrupt service init */
-	NVIC_SetPriority(EXTI2_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 15, 15));
+	NVIC_SetPriority(EXTI2_IRQn,
+			NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 15, 15));
 	NVIC_EnableIRQ(EXTI2_IRQn);
 
 	nRF24_GPIO_Init(); //Start the pins used by the NRF24
@@ -98,51 +99,44 @@ void vTransmitTask(void *pvParameters) {
 	memset((uint8_t *) nRF24_payload, '\0', 32); //Fill all the array space with zeros
 	sprintf((char *) nRF24_payload, "%s", "S0");
 	nRF24_TransmitPacket(nRF24_payload, 32);
-
 	while (1) {
 		if (xEventGroupWaitBits(xDataEventGroup,
-		DATA_EVENT_GROUP_BH1750_Msk | DATA_EVENT_GROUP_MPU9250_Msk,
-		pdTRUE, pdTRUE, portMAX_DELAY)) {
-			if (xSemaphoreTake(xnRF24Semaphore, pdMS_TO_TICKS(250)) == pdFALSE) {
-				UART_SendStr("FATAL Error: nRF24Transmit timeout");
-			} else {
-				nRF24_SetOperationalMode(nRF24_MODE_TX); //Set operational mode (PTX == transmitter)
-				nRF24_ClearIRQFlags(); //Clear any pending IRQ flags
-				GPIOC->BSRR = 1 << 13;
-				memset((uint8_t *) nRF24_payload, '\0', 32); //Fill all the array space with zeros
-				sprintf((char *) nRF24_payload, "B%.2f", xSensorData.brightness);
-				nRF24_TransmitPacket(nRF24_payload, 32);
+				DATA_EVENT_GROUP_BH1750_Msk | DATA_EVENT_GROUP_MPU9250_Msk,
+				pdTRUE, pdTRUE, portMAX_DELAY)) {
+			nRF24_SetOperationalMode(nRF24_MODE_TX); //Set operational mode (PTX == transmitter)
+			nRF24_ClearIRQFlags(); //Clear any pending IRQ flags
+			GPIOC->BSRR = 1 << 13;
+			memset((uint8_t *) nRF24_payload, '\0', 32); //Fill all the array space with zeros
+			sprintf((char *) nRF24_payload, "B%.2f", xSensorData.brightness);
+			nRF24_TransmitPacket(nRF24_payload, 32);
 
-				/*memset((uint8_t *)nRF24_payload, '\0', 32); //Fill all the array space with zeros
-				 sprintf((char *)nRF24_payload, "B%.2f %.2f %.2f %.2f", q0, q1, q2, q3);
-				 nRF24_TransmitPacket(nRF24_payload, 32);*/
+			/*memset((uint8_t *)nRF24_payload, '\0', 32); //Fill all the array space with zeros
+			 sprintf((char *)nRF24_payload, "B%.2f %.2f %.2f %.2f", q0, q1, q2, q3);
+			 nRF24_TransmitPacket(nRF24_payload, 32);*/
 
-				memset((uint8_t *) nRF24_payload, '\0', 32); //Fill all the array space with zeros
-				sprintf((char *) nRF24_payload, "X%ld %ld",
-						(int32_t) (xSensorData.acc[0] * 100000.0),
-						(int32_t) (xSensorData.gyr[0] * 100000.0));
-				nRF24_TransmitPacket(nRF24_payload, 32);
+			memset((uint8_t *) nRF24_payload, '\0', 32); //Fill all the array space with zeros
+			sprintf((char *) nRF24_payload, "X%ld %ld",
+					(int32_t) (xSensorData.acc[0] * 100000.0),
+					(int32_t) (xSensorData.gyr[0] * 100000.0));
+			nRF24_TransmitPacket(nRF24_payload, 32);
 
-				memset((uint8_t *) nRF24_payload, '\0', 32); //Fill all the array space with zeros
-				sprintf((char *) nRF24_payload, "Y%ld %ld",
-						(int32_t) (xSensorData.acc[1] * 100000.0),
-						(int32_t) (xSensorData.gyr[1] * 100000.0));
-				nRF24_TransmitPacket(nRF24_payload, 32);
+			memset((uint8_t *) nRF24_payload, '\0', 32); //Fill all the array space with zeros
+			sprintf((char *) nRF24_payload, "Y%ld %ld",
+					(int32_t) (xSensorData.acc[1] * 100000.0),
+					(int32_t) (xSensorData.gyr[1] * 100000.0));
+			nRF24_TransmitPacket(nRF24_payload, 32);
 
-				memset((uint8_t *) nRF24_payload, '\0', 32); //Fill all the array space with zeros
-				sprintf((char *) nRF24_payload, "Z%ld %ld",
-						(int32_t) (xSensorData.acc[2] * 100000.0),
-						(int32_t) (xSensorData.gyr[2] * 100000.0));
-				nRF24_TransmitPacket(nRF24_payload, 32);
+			memset((uint8_t *) nRF24_payload, '\0', 32); //Fill all the array space with zeros
+			sprintf((char *) nRF24_payload, "Z%ld %ld",
+					(int32_t) (xSensorData.acc[2] * 100000.0),
+					(int32_t) (xSensorData.gyr[2] * 100000.0));
+			nRF24_TransmitPacket(nRF24_payload, 32);
 
-				GPIOC->BRR = 1 << 13;
+			GPIOC->BRR = 1 << 13;
 
-				// Prepare the sensor for receiving the data while sleeping
-				nRF24_SetOperationalMode(nRF24_MODE_RX); //Set operational mode (PRX == receiver)
-				nRF24_CE_H();
-
-				xSemaphoreGive(xnRF24Semaphore);
-			}
+			// Prepare the sensor for receiving the data while sleeping
+			nRF24_SetOperationalMode(nRF24_MODE_RX); //Set operational mode (PRX == receiver)
+			nRF24_CE_H();
 		}
 	}
 }
@@ -150,72 +144,33 @@ void vTransmitTask(void *pvParameters) {
 void vReceiveTask(void *pvParameters) {
 	while (1) {
 		if (ulTaskNotifyTake(pdFALSE, portMAX_DELAY)) {
-			if (xSemaphoreTake(xnRF24Semaphore, pdMS_TO_TICKS(250)) == pdFALSE) {
-				UART_SendStr("FATAL Error: nRF24Receive timeout");
-			} else {
-				uint8_t payload_length; //Length of received payload
-				char* tokenCh = NULL; //Save the tokenized string
+			uint8_t payload_length; //Length of received payload
+			char* tokenCh = NULL; //Save the tokenized string
 
-				//Set operational mode (PRX == receiver)
-				nRF24_SetOperationalMode(nRF24_MODE_RX);
-				nRF24_CE_H();
-
-				if (nRF24_GetStatus_RXFIFO() != nRF24_STATUS_RXFIFO_EMPTY) {
-					nRF24_ReadPayload(nRF24_payload, &payload_length); //Get the payload from the transceiver
-					nRF24_ClearIRQFlags(); //Clear all pending IRQ flags
-
-					tokenCh = strtok((char*) nRF24_payload, ":");
-					if (strstr(tokenCh, "L1")) {
-						// TODO: Provide true functionality on the reception, like sending a message
-						tokenCh = strtok(NULL, ":"); // Tokenize the string
-						if (strstr(tokenCh, "1")) {
-							osQueueUARTMessage("->>  Received +1 command\r\n");
-							vBlinkyFadeIn();
-						} else if (strstr(tokenCh, "0")) {
-							osQueueUARTMessage("->>  Received  0 command\r\n");
-							vBlinkyFadeOut();
-						} else {
-							osQueueUARTMessage("->>  Received content: %s", nRF24_payload);
-						}
-					}
-				}
-
-				xSemaphoreGive(xnRF24Semaphore);
-			}
-		}
-	}
-}
-
-void vTaskInfoTransmitTask(void *pvParameters) {
-	TaskStatus_t status[12];
-	UBaseType_t NumTasks;
-	while (1) {
-		if (xSemaphoreTake(xnRF24Semaphore, pdMS_TO_TICKS(250)) == pdFALSE) {
-			UART_SendStr("FATAL Error: nRF24Transmit timeout");
-		} else {
-			nRF24_SetOperationalMode(nRF24_MODE_TX); //Set operational mode (PTX == transmitter)
-			NumTasks = uxTaskGetSystemState(status, uxTaskGetNumberOfTasks(), NULL);
-			for (int i = 0; i < NumTasks; i++) {
-				if (i == 0) {
-					memset((uint8_t *) nRF24_payload, '\0', 32); //Fill all the array space with zero
-					sprintf((char *) nRF24_payload, "%s", "{T");
-					nRF24_TransmitPacket(nRF24_payload, 32);
-				}
-				memset((uint8_t *) nRF24_payload, '\0', 32); //Fill all the array space with zero
-				sprintf((char *) nRF24_payload, "%d%u%s", status[i].eCurrentState,
-						status[i].ulRunTimeCounter, status[i].pcTaskName); //
-				nRF24_TransmitPacket(nRF24_payload, 32);
-			}
-			memset((uint8_t *) nRF24_payload, '\0', 32); //Fill all the array space with zero
-			sprintf((char *) nRF24_payload, "%s", "}T");
-			nRF24_TransmitPacket(nRF24_payload, 32);
-
-			// Prepare the sensor for receiving the data while sleeping
-			nRF24_SetOperationalMode(nRF24_MODE_RX); //Set operational mode (PRX == receiver)
+			//Set operational mode (PRX == receiver)
+			nRF24_SetOperationalMode(nRF24_MODE_RX);
 			nRF24_CE_H();
 
-			xSemaphoreGive(xnRF24Semaphore);
-			vTaskDelay(pdMS_TO_TICKS(5000));
+			if (nRF24_GetStatus_RXFIFO() != nRF24_STATUS_RXFIFO_EMPTY) {
+				nRF24_ReadPayload(nRF24_payload, &payload_length); //Get the payload from the transceiver
+				nRF24_ClearIRQFlags(); //Clear all pending IRQ flags
+
+				tokenCh = strtok((char*) nRF24_payload, ":");
+				if (strstr(tokenCh, "L1")) {
+					// TODO: Provide true functionality on the reception, like sending a message
+					tokenCh = strtok(NULL, ":"); // Tokenize the string
+					if (strstr(tokenCh, "1")) {
+						osQueueUARTMessage("->>  Received +1 command\r\n");
+						vBlinkyFadeIn();
+					} else if (strstr(tokenCh, "0")) {
+						osQueueUARTMessage("->>  Received  0 command\r\n");
+						vBlinkyFadeOut();
+					} else {
+						osQueueUARTMessage("->>  Received content: %s",
+								nRF24_payload);
+					}
+				}
+			}
 		}
 	}
 }

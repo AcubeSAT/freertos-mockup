@@ -26,6 +26,7 @@
 #include "Tasks/TraceTask.h"
 #include "Tasks/UARTTask.h"
 #include "Tasks/WWDGTask.h"
+#include "Tasks/ManagerTask.h"
 
 void prvSetupHardware();
 
@@ -36,22 +37,23 @@ int main(void) {
 	xI2CSemaphore = xSemaphoreCreateMutex();
 	xDataEventGroup = xEventGroupCreate();
 
-	xTaskCreate(vCheckTask, "Check", 200, (void*) 1, 1, NULL);
-	xTaskCreate(vCheckTask, "Check", 200, (void*) 2, 8, NULL);
+	xTaskCreate(vResumeSuspendedTask, "ResumeSuspended",600, NULL, 1, NULL); //Right after vBH1750Task);
+	xTaskCreate(vReceiveSuspendTask, "Suspend", 250, NULL, 5, xReceiveSuspendTask);
+
+	xTaskCreate(vCheckTask, "Check", 250, (void*) 1, 1, &xCheckTask);
+	xTaskCreate(vCheckTask, "Check", 250, (void*) 2, 8, &xCheckTask);
 #if SAT_Enable_Sensors
-	xTaskCreate(vMPU9250Task, "MPU9250", 400, NULL, 4, NULL);
+	xTaskCreate(vMPU9250Task, "MPU9250", 400, NULL, 4, &xMPU9250Task);
 	xTaskCreate(vBH1750Task, "BH1750", 400, NULL, 4, NULL);
 #endif
 
-	xTaskCreate(vUARTTask, "UART", 300, NULL, 3, NULL);
-	xTaskCreate(vRefreshWWDGTask, "RefreshWWDG", 100, NULL, 6, NULL);
-	xTaskCreate(vBlinkyTask, "Blinking", 200, NULL, 3, NULL);
+	xTaskCreate(vUARTTask, "UART", 300, NULL, 3, &xUARTTask);
+	xTaskCreate(vRefreshWWDGTask, "RefreshWWDG", 200, NULL, 6, &xRefreshWWDGTask);
+	xTaskCreate(vBlinkyTask, "Blinking", 300, NULL, 3, &xBlinkyTask);
 
 #if SAT_Enable_NRF24
-	xTaskCreate(vTransmitTask, "NRF_TX", 500, NULL, 2, NULL);
-	xTaskCreate(vReceiveTask, "NRF_RX", 500, NULL, 2, &xReceiveTask);
- 	xTaskCreate(vTaskInfoTransmitTask, "NRF_TX_TaskInfo", 400, NULL, 1, NULL);
- 	xnRF24Semaphore = xSemaphoreCreateMutex();
+	xTaskCreate(vTransmitTask, "NRF_TX", 600, NULL, 1, &xTransmitTask);
+	xTaskCreate(vReceiveTask, "NRF_RX", 600, NULL, 1, &xReceiveTask);
 #endif
 
 	xUARTQueue = xQueueCreate(45, sizeof(UARTMessage_t *));

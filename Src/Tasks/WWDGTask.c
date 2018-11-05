@@ -5,7 +5,7 @@
 #include "Tasks/WWDGTask.h"
 
 WWDG_HandleTypeDef hwwdg;
-
+TaskHandle_t xRefreshWWDGTask;
 /**
  * A task that periodically refreshes the window watchdog
  */

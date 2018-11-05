@@ -10,6 +10,8 @@ uint8_t blinkingEnabled = 1;
 uint8_t blinkingFadingOut = 0;
 uint8_t blinkingFadingIn = 0;
 
+TaskHandle_t xBlinkyTask;
+
 /**
  * A task that makes LEDs blink
  */

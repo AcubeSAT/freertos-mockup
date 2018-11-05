@@ -3,10 +3,12 @@
 
 #include "FreeRTOS.h"
 #include "queue.h"
+#include "task.h"
 
 // TODO: Use dynamic allocation for message strings
 typedef char * UARTMessage_t;
 extern QueueHandle_t xUARTQueue;
+extern TaskHandle_t xUARTTask;
 
 void vSetupUART();
 void osQueueUARTMessage(const char * format, ...);

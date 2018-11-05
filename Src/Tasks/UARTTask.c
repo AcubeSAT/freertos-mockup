@@ -12,6 +12,7 @@ QueueHandle_t xUARTQueue;
 #define LL_DMA_IsActive
 
 DMA_HandleTypeDef dma;
+TaskHandle_t xUARTTask;
 
 /**
  * A task that prints strings via UART through DMA

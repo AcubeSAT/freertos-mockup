@@ -5,6 +5,7 @@
 #include "FreeRTOS.h"
 #include "event_groups.h"
 #include "semphr.h"
+extern TaskHandle_t xMPU9250Task;
 
 /**
  * Sensor data holder

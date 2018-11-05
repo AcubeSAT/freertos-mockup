@@ -4,6 +4,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
+TaskHandle_t xCheckTask;
 /**
  * A task that periodically prints a heartbeat message via UART
  */

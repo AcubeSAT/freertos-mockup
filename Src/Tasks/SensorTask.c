@@ -13,6 +13,7 @@
 
 SensorData_t xSensorData;
 SemaphoreHandle_t xI2CSemaphore;
+TaskHandle_t xMPU9250Task;
 
 #if SAT_Enable_Sensors
 float gyrCal[3]; //Save the calibration values
