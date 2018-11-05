@@ -21,6 +21,7 @@
 
 #include "Tasks/BlinkyTask.h"
 #include "Tasks/CheckTask.h"
+#include "Tasks/DelayHelperTask.h"
 #include "Tasks/NRF24Task.h"
 #include "Tasks/SensorTask.h"
 #include "Tasks/TraceTask.h"
@@ -59,6 +60,7 @@ int main(void) {
 	osQueueUARTMessage("Hello world %d from FreeRTOS\r\n", xTaskGetTickCount());
 	osQueueUARTMessage("Compiled at " __DATE__ " " __TIME__ "\r\n");
 	vSetupWWDG();
+	vDisableDelayHelper(); // Don't waste time on HAL_Delay
 	vTaskStartScheduler();
 }
 
@@ -102,8 +104,8 @@ void prvSetupHardware() {
 	HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4);
 	HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);
 
-	//	Delay_Init(); // Don't initialise the delay, prvClkConfig()
-	// takes care of that for us already
+	// Make sure HAL_Delay() and HAL_GetTicks() are usable
+	vSetupDelayHelper();
 
 	// Initialise some clocks
 	__HAL_RCC_GPIOA_CLK_ENABLE();
