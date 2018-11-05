@@ -735,7 +735,7 @@ extern "C" {
 #endif
 
 #ifndef configUSE_TICKLESS_IDLE
-	#define configUSE_TICKLESS_IDLE 0
+	#define configUSE_TICKLESS_IDLE 1
 #endif
 
 #ifndef configPRE_SUPPRESS_TICKS_AND_SLEEP_PROCESSING
