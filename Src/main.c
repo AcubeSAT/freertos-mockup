@@ -37,8 +37,8 @@ int main(void) {
 	xI2CSemaphore = xSemaphoreCreateMutex();
 	xDataEventGroup = xEventGroupCreate();
 
-	//xTaskCreate(vCheckTask, "Check", 200, (void*) 1, 1, NULL);
-	//xTaskCreate(vCheckTask, "Check", 200, (void*) 2, 8, NULL);
+	xTaskCreate(vCheckTask, "Check", 200, (void*) 1, 1, NULL);
+	xTaskCreate(vCheckTask, "Check", 200, (void*) 2, 8, NULL);
 
 #if SAT_Enable_Sensors
 	xTaskCreate(vMPU9250Task, "MPU9250", 400, NULL, 4, NULL);
@@ -47,7 +47,7 @@ int main(void) {
 
 	xTaskCreate(vUARTTask, "UART", 300, NULL, 3, &xUARTTaskHandle);
 	xTaskCreate(vRefreshWWDGTask, "RefreshWWDG", 100, NULL, 6, NULL);
-	//xTaskCreate(vBlinkyTask, "Blinking", 200, NULL, 3, NULL);
+	xTaskCreate(vBlinkyTask, "Blinking", 200, NULL, 3, NULL);
 
 #if SAT_Enable_NRF24
 	xTaskCreate(vTransmitTask, "NRF_TX", 250, NULL, 1, NULL);
