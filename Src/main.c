@@ -26,6 +26,7 @@
 #include "Tasks/SensorTask.h"
 #include "Tasks/TraceTask.h"
 #include "Tasks/UARTTask.h"
+#include "Tasks/GPSTask.h"
 #include "Tasks/WWDGTask.h"
 
 void prvSetupHardware();
@@ -39,23 +40,27 @@ int main(void) {
 
 	xTaskCreate(vCheckTask, "Check", 200, (void*) 1, 1, NULL);
 	xTaskCreate(vCheckTask, "Check", 200, (void*) 2, 8, NULL);
+
 #if SAT_Enable_Sensors
-	xTaskCreate(vMPU9250Task, "MPU9250", 400, NULL, 4, NULL);
-	xTaskCreate(vBH1750Task, "BH1750", 400, NULL, 4, NULL);
+	xTaskCreate(vMPU9250Task, "MPU9250", 300, NULL, 4, NULL);
+	xTaskCreate(vBH1750Task, "BH1750", 300, NULL, 4, NULL);
 #endif
 
-	xTaskCreate(vUARTTask, "UART", 300, NULL, 3, NULL);
+	xTaskCreate(vUARTTask, "UART", 300, NULL, 3, &xUARTTaskHandle);
 	xTaskCreate(vRefreshWWDGTask, "RefreshWWDG", 100, NULL, 6, NULL);
-	xTaskCreate(vBlinkyTask, "Blinking", 200, NULL, 3, NULL);
+	xTaskCreate(vBlinkyTask, "Blinking", 100, NULL, 3, NULL);
 
 #if SAT_Enable_NRF24
-	xTaskCreate(vTransmitTask, "NRF_TX", 500, NULL, 2, NULL);
-	xTaskCreate(vReceiveTask, "NRF_RX", 500, NULL, 2, &xReceiveTask);
- 	xTaskCreate(vTaskInfoTransmitTask, "NRF_TX_TaskInfo", 400, NULL, 1, NULL);
+	xTaskCreate(vTransmitTask, "NRF_TX", 250, NULL, 1, NULL);
+	xTaskCreate(vReceiveTask, "NRF_RX", 250, NULL, 1, &xReceiveTask);
+ 	xTaskCreate(vTaskInfoTransmitTask, "NRF_TX_TaskInfo", 300, NULL, 2, NULL);
  	xnRF24Semaphore = xSemaphoreCreateMutex();
 #endif
 
-	xUARTQueue = xQueueCreate(45, sizeof(UARTMessage_t *));
+#if SAT_Enable_GPS
+	xTaskCreate(vGPSMessageRXTask, "GPS_Msg_RX", 350, NULL, 3, &xGPSMsgRXTask);
+	xTaskCreate(vGPSTask, "GPS_Main", 200, NULL, 3, &xGPSTaskHandle);
+#endif
 
 	osQueueUARTMessage("Hello world %d from FreeRTOS\r\n", xTaskGetTickCount());
 	osQueueUARTMessage("Compiled at " __DATE__ " " __TIME__ "\r\n");
@@ -119,6 +124,9 @@ void prvSetupHardware() {
 #endif
 #if SAT_Enable_Sensors
 	vSetupSensors();
+#endif
+#if SAT_Enable_GPS
+	vSetupGPS();
 #endif
 	vSetupBlinky();
 	vSetupCheck();
