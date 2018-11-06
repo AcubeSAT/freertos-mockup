@@ -73,8 +73,6 @@ void prvClkConfig() {
 	while (LL_RCC_HSE_IsReady() != 1) {
 	};
 
-
-
 	/* Main PLL configuration and activation */
 	LL_RCC_PLL_ConfigDomain_SYS(LL_RCC_PLLSOURCE_HSE_DIV_1, LL_RCC_PLL_MUL_9);
 	LL_RCC_PLL_Enable();
@@ -99,7 +97,7 @@ void prvClkConfig() {
 
 	/* Enable LSE oscillator */
 	LL_PWR_EnableBkUpAccess();
-    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_BKP);
+	LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_BKP);
 	LL_RCC_ForceBackupDomainReset();
 	LL_RCC_ReleaseBackupDomainReset();
 	LL_RCC_LSE_Enable();
@@ -119,9 +117,12 @@ void prvSetupHardware() {
 	// takes care of that for us already
 
 	// Initialise some clocks
-	__HAL_RCC_GPIOA_CLK_ENABLE();
-	__HAL_RCC_GPIOB_CLK_ENABLE();
-	__HAL_RCC_GPIOC_CLK_ENABLE();
+	__HAL_RCC_GPIOA_CLK_ENABLE()
+	;
+	__HAL_RCC_GPIOB_CLK_ENABLE()
+	;
+	__HAL_RCC_GPIOC_CLK_ENABLE()
+	;
 
 	// Initialise all other tasks
 	vSetupUART();
