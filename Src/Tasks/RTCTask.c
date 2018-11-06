@@ -3,11 +3,12 @@
 #include "stm32f1xx_hal_rcc_ex.h"
 #include "stm32f1xx_hal_rtc.h"
 #include "Tasks/UARTTask.h"
+#include "task.h"
 
-
-//#include "stm32f1xx_ll_rcc.h"
-//#include "stm32f1xx_ll_pwr.h"
-//#include "stm32f1xx_ll_rtc.h"
+#include "stm32f1xx_ll_bus.h"
+#include "stm32f1xx_ll_rcc.h"
+#include "stm32f1xx_ll_pwr.h"
+#include "stm32f1xx_ll_rtc.h"
 
 
 /*
@@ -22,15 +23,13 @@ RTC_DateTypeDef DateToUpdate;	//date info
 void vRTCTask(void *pvParameters)
 {
 
-	vSetUpRTC();
-	vRTCInit();
+
 	while(1)
 	{
-
 		HAL_RTC_GetTime(&hrtc,&sTime,RTC_FORMAT_BIN);	//get time
 		HAL_RTC_GetDate(&hrtc,&DateToUpdate,RTC_FORMAT_BIN);	//get date
-		osQueueUARTMessage("Time:  %d:%d:%d",sTime.Hours,sTime.Minutes,sTime.Seconds);
-		HAL_Delay(1000);
+		osQueueUARTMessage("Time:  %02u:%02u:%02u\r\n",sTime.Hours,sTime.Minutes,sTime.Seconds);
+		vTaskDelay(pdMS_TO_TICKS(1000));
 
 	}
 }
@@ -39,8 +38,11 @@ void vRTCTask(void *pvParameters)
 void vSetUpRTC()
 {
 
-	RCC_PeriphCLKInitTypeDef PeriphClkInit;
+	LL_PWR_EnableBkUpAccess();	//I should probably deleted
+	/* Enable BKP CLK enable for backup registers */
+	LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_BKP);	//I should probably deleted
 
+	RCC_PeriphCLKInitTypeDef PeriphClkInit;
 
 	PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_RTC;
 
@@ -48,6 +50,7 @@ void vSetUpRTC()
 
     HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit);	//Initializes the RCC extended peripherals clocks according to the specified parameters in the RCC_PeriphCLKInitTypeDef
 
+	__HAL_RCC_RTC_ENABLE();
 
 	/*
 	LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_PWR);	//enable power interface
@@ -82,7 +85,7 @@ void vRTCInit()
     */
   sTime.Hours = 0;
   sTime.Minutes = 0;
-  sTime.Seconds = 0;
+  sTime.Seconds = 1;
   HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
 
   /* Random Date */

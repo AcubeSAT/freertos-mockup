@@ -28,6 +28,6 @@ void vSetupCheck() {
 	// Blink C13 LED in a cool way
 	for (int a = 0; a < 20; a++) {
 		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-		Manual_Delay(a);
+		//Manual_Delay(a);
 	}
 }

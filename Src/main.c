@@ -11,6 +11,8 @@
 #include "stm32f1xx_ll_rcc.h"
 #include "stm32f1xx_ll_utils.h"
 #include "stm32f1xx_ll_tim.h"
+#include "stm32f1xx_ll_pwr.h"
+#include "stm32f1xx_ll_bus.h"
 
 #include "MockupConfig.h"
 #include "FreeRTOS.h"
@@ -46,12 +48,12 @@ int main(void) {
 
 	xTaskCreate(vUARTTask, "UART", 300, NULL, 3, NULL);
 	xTaskCreate(vRefreshWWDGTask, "RefreshWWDG", 200, NULL, 6, NULL);
-	xTaskCreate(vBlinkyTask, "Blinking", 300, NULL, 3, NULL);
-	xTaskCreate(vRTCTask, "RTC", 100, NULL, 3, NULL);
+	xTaskCreate(vBlinkyTask, "Blinking", 200, NULL, 3, NULL);
+	xTaskCreate(vRTCTask, "RTC", 200, NULL, 3, NULL);
 
 #if SAT_Enable_NRF24
-	xTaskCreate(vTransmitTask, "NRF_TX", 600, NULL, 1, NULL);
-	xTaskCreate(vReceiveTask, "NRF_RX", 600, NULL, 1, &xReceiveTask);
+	xTaskCreate(vTransmitTask, "NRF_TX", 500, NULL, 1, NULL);
+	xTaskCreate(vReceiveTask, "NRF_RX", 400, NULL, 1, &xReceiveTask);
 #endif
 
 	xUARTQueue = xQueueCreate(45, sizeof(UARTMessage_t *));
@@ -71,10 +73,7 @@ void prvClkConfig() {
 	while (LL_RCC_HSE_IsReady() != 1) {
 	};
 
-	/* Enable LSE oscillator */
-	LL_RCC_LSE_Enable();
-	while (LL_RCC_LSE_IsReady() != 1) {
-	};
+
 
 	/* Main PLL configuration and activation */
 	LL_RCC_PLL_ConfigDomain_SYS(LL_RCC_PLLSOURCE_HSE_DIV_1, LL_RCC_PLL_MUL_9);
@@ -97,6 +96,15 @@ void prvClkConfig() {
 
 	/* Update CMSIS variable (which can be updated also through SystemCoreClockUpdate function) */
 	LL_SetSystemCoreClock(72000000);
+
+	/* Enable LSE oscillator */
+	LL_PWR_EnableBkUpAccess();
+    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_BKP);
+	LL_RCC_ForceBackupDomainReset();
+	LL_RCC_ReleaseBackupDomainReset();
+	LL_RCC_LSE_Enable();
+	while (LL_RCC_LSE_IsReady() != 1) {
+	};
 }
 
 void prvSetupHardware() {
@@ -125,6 +133,9 @@ void prvSetupHardware() {
 #endif
 	vSetupBlinky();
 	vSetupCheck();
+
+	vSetUpRTC();
+	vRTCInit();
 
 	if (SAT_Enable_FreeRTOS_Trace) {
 		vSetupTrace();

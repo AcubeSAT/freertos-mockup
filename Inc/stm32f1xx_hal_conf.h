@@ -71,7 +71,7 @@
 /*#define HAL_HCD_MODULE_ENABLED   */
 /*#define HAL_PWR_MODULE_ENABLED   */
 /*#define HAL_RCC_MODULE_ENABLED   */
-/*#define HAL_RTC_MODULE_ENABLED   */
+#define HAL_RTC_MODULE_ENABLED
 /*#define HAL_SD_MODULE_ENABLED   */
 /*#define HAL_MMC_MODULE_ENABLED   */
 /*#define HAL_SDRAM_MODULE_ENABLED   */
@@ -92,6 +92,7 @@
 #define HAL_TIM_MODULE_ENABLED
 #define HAL_UART_MODULE_ENABLED
 #define HAL_I2C_MODULE_ENABLED
+
 
 /* ########################## Oscillator Values adaptation ####################*/
 /**
