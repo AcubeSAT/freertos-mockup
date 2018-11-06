@@ -11,7 +11,11 @@
 // Preliminary version of flash reading function
 uint32_t ulFlashRead(uint32_t ulAddress)
 {
-	return *(uint32_t *)ulAddress;
+	if ((int32_t)(*(uint32_t *)ulAddress) < 0) {
+		return (*(uint32_t *)ulAddress) * -1;
+	} else {
+		return *(uint32_t *)ulAddress;
+	}
 }
 
 void vCheckTask(void *pvParameters) {
@@ -19,8 +23,9 @@ void vCheckTask(void *pvParameters) {
 
 	for (;;) {
 		osQueueUARTMessage("%u SystemGood %d \r\n", value, xTaskGetTickCount());
+		osQueueUARTMessage("Value of var from memory: %d\r\n", ulFlashRead((uint32_t)(0x20001dbf)));
 		//taskYIELD();
-		vTaskDelay(pdMS_TO_TICKS(1000));
+		vTaskDelay(pdMS_TO_TICKS(3000));
 	}
 }
 
