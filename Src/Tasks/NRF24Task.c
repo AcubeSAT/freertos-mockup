@@ -26,7 +26,7 @@ TaskHandle_t xReceiveTask;
 SemaphoreHandle_t xnRF24Semaphore;
 
 
-void ulFlashWrite(uint32_t ulAddress, uint64_t data)
+void vFlashWrite(uint32_t ulAddress, uint64_t data)
 {
 	taskENTER_CRITICAL();  // Enter in a critical section
 	HAL_FLASH_Unlock();
@@ -162,14 +162,13 @@ void vReceiveTask(void *pvParameters) {
 	uint8_t payload_length; //Length of received payload
 	volatile uint8_t *payL_addr = &payload_length;
 
-	ulFlashWrite((uint32_t)0x20002c7f, (uint64_t) 5);
+	//vFlashWrite((uint32_t)0x20002c7f, (uint64_t) 5);
 
 	while (1) {
 		if (ulTaskNotifyTake(pdFALSE, portMAX_DELAY)) {
 			if (xSemaphoreTake(xnRF24Semaphore, pdMS_TO_TICKS(250)) == pdFALSE) {
 				UART_SendStr("FATAL Error: nRF24Receive timeout");
 			} else {
-				uint8_t payload_length; //Length of received payload
 				char* tokenCh = NULL; //Save the tokenized string
 
 				//Set operational mode (PRX == receiver)
@@ -201,6 +200,10 @@ void vReceiveTask(void *pvParameters) {
 							xTaskNotifyGive(xGPSTaskHandle);
 #endif
 						}
+					} else if (strstr(tokenCh, "Patch")) {
+						tokenCh = strtok(NULL, ":"); // Tokenize the string
+						osQueueUARTMessage("->>  Received value change command\r\n");
+						vFlashWrite((uint32_t)0x20001dbf, (uint64_t)strtol(tokenCh, NULL, 0));
 					}
 				}
 				nRF24_FlushRX();
