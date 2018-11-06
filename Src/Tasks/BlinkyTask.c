@@ -14,7 +14,7 @@ uint8_t blinkingFadingIn = 0;
  * A task that makes LEDs blink
  */
 void vBlinkyTask(void *pvParameters) {
-	const float frequency = 0.0007;
+	const float frequency = 0.007;
 
 	const float blinkStep = 1.10;
 	//"exponential" rate of change in led intensity
