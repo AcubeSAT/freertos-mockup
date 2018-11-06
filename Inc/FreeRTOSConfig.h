@@ -40,6 +40,8 @@
  * See http://www.freertos.org/a00110.html.
  *----------------------------------------------------------*/
 
+#include "Peripherals/uart.h"
+
 #define SAT_Enable_FreeRTOS_Trace 	1 // Whether to enable trace data for Atollic task runtime stats (http://blog.atollic.com/visualizing-run-time-statistics-using-freertos)
 
 #define configUSE_PREEMPTION		1
@@ -49,7 +51,7 @@
 #define configTICK_RATE_HZ			( ( TickType_t ) 1000 )
 #define configMAX_PRIORITIES		( 5 )
 #define configMINIMAL_STACK_SIZE	( ( unsigned short ) 128 )
-#define configTOTAL_HEAP_SIZE		( ( size_t ) ( 15 * 1024 ) )
+#define configTOTAL_HEAP_SIZE		( ( size_t ) ( 12 * 1024 ) )
 #define configMAX_TASK_NAME_LEN		( 16 )
 #define configUSE_16_BIT_TICKS		0
 #define configIDLE_SHOULD_YIELD		1

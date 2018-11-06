@@ -6,37 +6,33 @@
 #include "stdarg.h"
 
 #include "Tasks/UARTTask.h"
-QueueHandle_t xUARTQueue;
 
 #define LL_UART_DMA_CHAN_TX __LL_DMA_GET_CHANNEL(UART_DMA_CHAN_TX)
 #define LL_DMA_IsActive
+#define UART_QUEUE_SIZE		85
 
 DMA_HandleTypeDef dma;
+
+QueueHandle_t xUARTQueue;
+TaskHandle_t xUARTTaskHandle;
 
 /**
  * A task that prints strings via UART through DMA
  */
 void vUARTTask(void *pvParameters) {
-	UARTMessage_t message;
+	UARTMessage_t message = NULL;
 
 	while (1) {
 		if (xQueueReceive(xUARTQueue, &message, portMAX_DELAY)) { // Receive a message from the queue
 			LL_USART_EnableDMAReq_TX(UART_PORT); // Enable DMA in the USART registers
 			LL_DMA_SetDataLength(DMA1, LL_UART_DMA_CHAN_TX, strlen(message)); // Set amount of copied bits for DMA
-			LL_DMA_ConfigAddresses(DMA1, LL_UART_DMA_CHAN_TX, message,
-					&(UART_PORT->DR), LL_DMA_DIRECTION_MEMORY_TO_PERIPH); // Send message from memory to the USART Data Register
+			LL_DMA_ConfigAddresses(DMA1, LL_UART_DMA_CHAN_TX, (uint32_t)message,
+					(uint32_t)&(UART_PORT->DR), LL_DMA_DIRECTION_MEMORY_TO_PERIPH); // Send message from memory to the USART Data Register
 			LL_DMA_EnableChannel(DMA1, LL_UART_DMA_CHAN_TX); // Enable the DMA transaction
 
-			// Note: The following polling method doesn't make sense, since it wastes the processor speed.
-			// An interrupt should be used instead.
-			while (__HAL_DMA_GET_FLAG(&dma, __HAL_DMA_GET_TC_FLAG_INDEX(&dma))
-					== RESET) {
-			} // Wait until the transaction is complete
-			__HAL_DMA_CLEAR_FLAG(&dma, __HAL_DMA_GET_TC_FLAG_INDEX(&dma)); // Clear the Transaction Complete flag so it can be used later
-
-			LL_DMA_DisableChannel(DMA1, LL_UART_DMA_CHAN_TX); // Disable the DMA channel (this is necessary, so it can be reused later)
-			LL_USART_DisableDMAReq_TX(UART_PORT); // Disable DMA in the USART registers
+			xTaskNotifyWait(0x00, 0x00, NULL, portMAX_DELAY);
 			vPortFree(message); // Free up the memory held by the message string
+			message = NULL;
 		}
 	}
 }
@@ -55,7 +51,6 @@ void osQueueUARTMessage(const char * format, ...) {
 	va_end(arg);
 
 	//configASSERT(strlen(message) < 127);
-
 	UARTMessage_t pcUARTMessage = pvPortMalloc(strlen(buffer) + 1);
 
 	if (pcUARTMessage == NULL) {
@@ -77,7 +72,7 @@ void vSetupUART() {
 	UART_Init(115200); //Initialize the UART with the set baud rate
 	UART_SendStr("CubeSAT hardware initialization...\r\n");
 
-	// DMA (Direct Memory Access) initialisation
+	// DMA (Direct Memory Access) initialization
 	__HAL_RCC_DMA1_CLK_ENABLE();
 	dma.Instance = UART_DMA_CHAN_TX; // DMA channel for UART
 	dma.Init.Direction = DMA_MEMORY_TO_PERIPH; // Transfer data from memory to peripheral
@@ -89,4 +84,19 @@ void vSetupUART() {
 	dma.Init.Priority = DMA_PRIORITY_LOW;
 	HAL_DMA_Init(&dma);
 	//	__HAL_LINKDMA(huart,hdmatx,dma);
+
+	LL_DMA_EnableIT_TC(DMA1, LL_UART_DMA_CHAN_TX);
+
+	NVIC_SetPriority(DMA1_Channel4_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 12, 0));
+	NVIC_EnableIRQ(DMA1_Channel4_IRQn);
+
+	xUARTQueue = xQueueCreate(UART_QUEUE_SIZE, sizeof(UARTMessage_t *));
+}
+
+void DMA_UART_TX_ISR(void){
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+	// Notify the UART1 TX task that transaction has ended
+	vTaskNotifyGiveFromISR(xUARTTaskHandle, &xHigherPriorityTaskWoken);
+	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }

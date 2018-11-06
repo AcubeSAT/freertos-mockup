@@ -15,13 +15,10 @@ uint32_t ulFlashRead(uint32_t ulAddress)
 }
 
 void vCheckTask(void *pvParameters) {
-	uint8_t value = (uint8_t) pvParameters;
-	uint8_t *payl_addr = (uint8_t *)0x20002c7f;
+	uint32_t value = (uint32_t) pvParameters;
 
 	for (;;) {
-		osQueueUARTMessage("%d SystemGood %d \r\n", value, xTaskGetTickCount());
-		osQueueUARTMessage("Var payload_length value: %d\r\n", *payl_addr);
-		osQueueUARTMessage("Value read using function: %ld\r\n", ulFlashRead((uint32_t)0x20002c7f));
+		osQueueUARTMessage("%u SystemGood %d \r\n", value, xTaskGetTickCount());
 		//taskYIELD();
 		vTaskDelay(pdMS_TO_TICKS(1000));
 	}
@@ -38,6 +35,6 @@ void vSetupCheck() {
 	// Blink C13 LED in a cool way
 	for (int a = 0; a < 20; a++) {
 		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-		Manual_Delay(a);
+		HAL_Delay(a);
 	}
 }

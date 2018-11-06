@@ -2,7 +2,7 @@
 
 void SPI_MasterInit(uint8_t bit_order, uint8_t clk_freq)
 {
-	uint8_t clear;
+	volatile uint8_t clear;  // Used to read the register of SPI to clear them
 	
 	RCC->APB2ENR |= RCC_APB2ENR_SPI1EN|RCC_APB2ENR_IOPAEN;
 	
