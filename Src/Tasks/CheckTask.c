@@ -8,10 +8,10 @@
  * A task that periodically prints a heartbeat message via UART
  */
 void vCheckTask(void *pvParameters) {
-	uint8_t value = *(uint8_t *) pvParameters;
+	uint32_t value = (uint32_t) pvParameters;
 
 	for (;;) {
-		osQueueUARTMessage("%d SystemGood %d \r\n", value, xTaskGetTickCount());
+		osQueueUARTMessage("%u SystemGood %d \r\n", value, xTaskGetTickCount());
 		//taskYIELD();
 		vTaskDelay(pdMS_TO_TICKS(1000));
 	}

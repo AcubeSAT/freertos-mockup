@@ -182,7 +182,9 @@ void vReceiveTask(void *pvParameters) {
 						tokenCh = strtok(NULL, ":"); // Tokenize the string
 						if (strstr(tokenCh, "Data")) {
 							osQueueUARTMessage("->>  Received GPS command\r\n");
+#if SAT_Enable_GPS
 							xTaskNotifyGive(xGPSTaskHandle);
+#endif
 						}
 					}
 				}

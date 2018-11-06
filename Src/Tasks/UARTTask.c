@@ -69,7 +69,7 @@ void osQueueUARTMessage(const char * format, ...) {
 }
 
 void vSetupUART() {
-	UART_Init(9600); //Initialize the UART with the set baud rate
+	UART_Init(115200); //Initialize the UART with the set baud rate
 	UART_SendStr("CubeSAT hardware initialization...\r\n");
 
 	// DMA (Direct Memory Access) initialization

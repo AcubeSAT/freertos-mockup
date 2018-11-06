@@ -116,6 +116,7 @@ void vGPSTask(void *pvParameters) {
 
 	while(1) {
 		if (ulTaskNotifyTake(pdFALSE, portMAX_DELAY)) {
+#if SAT_Enable_NRF24
 			if (xSemaphoreTake(xnRF24Semaphore, pdMS_TO_TICKS(250))) {
 				nRF24_SetOperationalMode(nRF24_MODE_TX);
 				nRF24_ClearIRQFlags();
@@ -143,6 +144,7 @@ void vGPSTask(void *pvParameters) {
 				nRF24_FlushTX();
 				xSemaphoreGive(xnRF24Semaphore);
 			}
+#endif
 		}
 	}
 }

@@ -41,8 +41,8 @@ int main(void) {
 	xTaskCreate(vCheckTask, "Check", 200, (void*) 2, 8, NULL);
 
 #if SAT_Enable_Sensors
-	xTaskCreate(vMPU9250Task, "MPU9250", 400, NULL, 4, NULL);
-	xTaskCreate(vBH1750Task, "BH1750", 400, NULL, 4, NULL);
+	xTaskCreate(vMPU9250Task, "MPU9250", 300, NULL, 4, NULL);
+	xTaskCreate(vBH1750Task, "BH1750", 300, NULL, 4, NULL);
 #endif
 
 	xTaskCreate(vUARTTask, "UART", 300, NULL, 3, &xUARTTaskHandle);
