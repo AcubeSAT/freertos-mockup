@@ -1,10 +1,13 @@
+#include "Tasks/CheckTask.h"
 #include "Tasks/UARTTask.h"
 #include "uart.h"
 #include "delay.h"
 #include "FreeRTOS.h"
 #include "task.h"
 
-TaskHandle_t xCheckTask;
+TaskHandle_t xCheckTask1;
+TaskHandle_t xCheckTask2;
+
 /**
  * A task that periodically prints a heartbeat message via UART
  */

@@ -9,5 +9,7 @@
 
 void vCheckTask(void *pvParameters);
 void vSetupCheck();
-extern TaskHandle_t xCheckTask;
+extern TaskHandle_t xCheckTask1;
+extern TaskHandle_t xCheckTask2;
+
 #endif /* INC_TASKS_CHECKTASK_H_ */

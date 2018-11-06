@@ -3,6 +3,7 @@
 #include "MockupConfig.h"
 #include "Tasks/NRF24Task.h"
 #include "Tasks/BlinkyTask.h"
+#include "Tasks/ManagerTask.h"
 #include "Tasks/SensorTask.h"
 #include "Tasks/UARTTask.h"
 #include "stm32f1xx_ll_bus.h"
@@ -159,6 +160,7 @@ void vReceiveTask(void *pvParameters) {
 				if (strstr(tokenCh, "L1")) {
 					// TODO: Provide true functionality on the reception, like sending a message
 					tokenCh = strtok(NULL, ":"); // Tokenize the string
+					xTaskNotifyGive(xReceiveSuspendTask);
 					if (strstr(tokenCh, "1")) {
 						osQueueUARTMessage("->>  Received +1 command\r\n");
 						vBlinkyFadeIn();
