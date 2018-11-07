@@ -49,6 +49,12 @@ void UART_Init(uint32_t baudrate) {
 void UART_SendChar(char ch) {
 	while (!LL_USART_IsActiveFlag_TC(UART_PORT)); // wait for "Transmission Complete" flag cleared
 	LL_USART_TransmitData8(UART_PORT, ch);
+	/* **************************************************** *
+	 * The second while loops serves as guarantee that		*
+	 * the data is transmitted through the channel.			*
+	 * This is to prevent any data corruption.				*
+	 * **************************************************** */
+	while (!LL_USART_IsActiveFlag_TC(UART_PORT));
 }
 
 void UART_SendInt(int32_t num) {
