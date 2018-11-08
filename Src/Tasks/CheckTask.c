@@ -20,10 +20,14 @@ uint32_t ulFlashRead(uint32_t ulAddress)
 
 void vCheckTask(void *pvParameters) {
 	uint32_t value = (uint32_t) pvParameters;
+	char cTempArray[12] = {"\0"};
 
 	for (;;) {
+		for (size_t i = 0; i < 10; i++) {
+			cTempArray[i] = (char)ulFlashRead((uint32_t)(0x0800a1b8 + i));
+		}
 		osQueueUARTMessage("%u SystemGood %d \r\n", value, xTaskGetTickCount());
-		osQueueUARTMessage("Value of var from memory: %d\r\n", ulFlashRead((uint32_t)(0x20001dbf)));
+		osQueueUARTMessage("Value of var from memory addr 0x%08X: %s\r\n", 0x0800a1b8, cTempArray);
 		//taskYIELD();
 		vTaskDelay(pdMS_TO_TICKS(3000));
 	}
