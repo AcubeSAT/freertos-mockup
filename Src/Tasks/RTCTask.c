@@ -33,9 +33,7 @@ void vRTCTask(void *pvParameters) {
 //RTC clock configuration
 void vSetUpRTC() {
 
-	LL_PWR_EnableBkUpAccess();	//I should probably deleted
 	/* Enable BKP CLK enable for backup registers */
-	LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_BKP);//I should probably deleted
 
 	RCC_PeriphCLKInitTypeDef PeriphClkInit;
 
@@ -45,7 +43,7 @@ void vSetUpRTC() {
 
 	HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit);//Initializes the RCC extended peripherals clocks according to the specified parameters in the RCC_PeriphCLKInitTypeDef
 
-	__HAL_RCC_RTC_ENABLE();
+	__HAL_RCC_RTC_ENABLE();	//enable clock
 
 	/*
 	 LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_PWR);	//enable power interface

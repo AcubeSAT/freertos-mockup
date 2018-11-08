@@ -96,13 +96,14 @@ void prvClkConfig() {
 	LL_SetSystemCoreClock(72000000);
 
 	/* Enable LSE oscillator */
+	LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_PWR);
 	LL_PWR_EnableBkUpAccess();
-	LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_BKP);
 	LL_RCC_ForceBackupDomainReset();
 	LL_RCC_ReleaseBackupDomainReset();
 	LL_RCC_LSE_Enable();
 	while (LL_RCC_LSE_IsReady() != 1) {
 	};
+
 }
 
 void prvSetupHardware() {
