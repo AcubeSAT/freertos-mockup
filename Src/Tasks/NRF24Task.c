@@ -203,7 +203,7 @@ void vTaskInfoTransmitTask(void *pvParameters) {
 			UART_SendStr("FATAL Error: nRF24Transmit timeout");
 		} else {
 			nRF24_SetOperationalMode(nRF24_MODE_TX); //Set operational mode (PTX == transmitter)
-			NumTasks = uxTaskGetSystemState(status, uxTaskGetNumberOfTasks(), NULL);
+			NumTasks = uxTaskGetSystemState(status, 12, NULL);
 			for (int i = 0; i < NumTasks; i++) {
 				if (i == 0) {
 					sprintf((char *) nRF24_payload, "%s", "{T");
