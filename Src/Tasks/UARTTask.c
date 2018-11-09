@@ -44,10 +44,10 @@ void osQueueUARTMessage(const char * format, ...) {
 	// TODO: Less copying around bits
 
 	va_list arg;
-	char buffer[128];
+	char buffer[84];
 
 	va_start(arg, format);
-	vsnprintf(buffer, 128, format, arg);
+	vsnprintf(buffer, 84, format, arg);
 	va_end(arg);
 
 	//configASSERT(strlen(message) < 127);
