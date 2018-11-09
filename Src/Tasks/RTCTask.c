@@ -4,11 +4,12 @@
 #include "stm32f1xx_hal_rtc.h"
 #include "Tasks/UARTTask.h"
 #include "task.h"
-
-#include "stm32f1xx_ll_bus.h"
-#include "stm32f1xx_ll_rcc.h"
-#include "stm32f1xx_ll_pwr.h"
-#include "stm32f1xx_ll_rtc.h"
+/*
+ #include "stm32f1xx_ll_bus.h"
+ #include "stm32f1xx_ll_rcc.h"
+ #include "stm32f1xx_ll_pwr.h"
+ #include "stm32f1xx_ll_rtc.h"
+ */
 
 /*
  * A task that create a calendar and send time each second
@@ -77,7 +78,7 @@ void vRTCInit() {
 	 */
 	sTime.Hours = 0;
 	sTime.Minutes = 0;
-	sTime.Seconds = 1;
+	sTime.Seconds = 0;
 	HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
 
 	/* Random Date */
