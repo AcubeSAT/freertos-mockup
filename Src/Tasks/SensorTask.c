@@ -13,6 +13,21 @@
 
 SensorData_t xSensorData;
 SemaphoreHandle_t xI2CSemaphore;
+StaticSemaphore_t xI2CMutexBuffer;
+
+EventGroupHandle_t xDataEventGroupHandle;
+StaticEventGroup_t xDataCreatedEventGroup;
+
+TaskHandle_t xBH1750Handle = NULL;
+TaskHandle_t xMPU9250Handle = NULL;
+
+StaticTask_t xBH1750TaskBuffer;
+StaticTask_t xMPU9250TaskBuffer;
+
+#if SAT_Enable_Sensors
+StackType_t xBH1750TaskStack[BH1750_TASK_STACK_SIZE];
+StackType_t xMPU9250TaskStack[MPU9250_TASK_STACK_SIZE];
+#endif
 
 #if SAT_Enable_Sensors
 float gyrCal[3]; //Save the calibration values
@@ -28,7 +43,7 @@ void vBH1750Task(void *pvParameters) {
 		} else {
 			xSensorData.brightness = BH1750_GetBrightnessCont();
 			xSemaphoreGive(xI2CSemaphore);
-			xEventGroupSetBits(xDataEventGroup, DATA_EVENT_GROUP_BH1750_Msk);
+			xEventGroupSetBits(xDataEventGroupHandle, DATA_EVENT_GROUP_BH1750_Msk);
 
 			if (SAT_Serial_Debug)
 				osQueueUARTMessage("bri %f\r\n", xSensorData.brightness);
@@ -51,7 +66,7 @@ void vMPU9250Task(void *pvParameters) {
 			AK8963GetMagnuT(xSensorData.magn, xSensorData.magn_adj);
 			xSemaphoreGive(xI2CSemaphore);
 
-			xEventGroupSetBits(xDataEventGroup, DATA_EVENT_GROUP_MPU9250_Msk);
+			xEventGroupSetBits(xDataEventGroupHandle, DATA_EVENT_GROUP_MPU9250_Msk);
 
 			if (SAT_Serial_Debug) {
 				osQueueUARTMessage(

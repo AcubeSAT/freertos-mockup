@@ -6,6 +6,11 @@
 
 WWDG_HandleTypeDef hwwdg;
 
+TaskHandle_t xWWDGHandle = NULL;
+
+StaticTask_t xRefreshWWDGTaskBuffer;
+StackType_t xRefreshWWDGTaskStack[REFRESHWWDG_TASK_STACK_SIZE];
+
 /**
  * A task that periodically refreshes the window watchdog
  */

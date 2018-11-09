@@ -4,11 +4,17 @@
 #include "math.h"
 #include "Tasks/UARTTask.h"
 #include "stm32f1xx_ll_tim.h"
+#include "Tasks/BlinkyTask.h"
 
 // LED blinking flags
 uint8_t blinkingEnabled = 1;
 uint8_t blinkingFadingOut = 0;
 uint8_t blinkingFadingIn = 0;
+
+TaskHandle_t xBlinkyHandle = NULL;
+
+StaticTask_t xBlinkyTaskBuffer;
+StackType_t xBlinkyTaskStack[BLINKY_TASK_STACK_SIZE];
 
 /**
  * A task that makes LEDs blink

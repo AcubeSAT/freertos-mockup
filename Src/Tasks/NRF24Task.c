@@ -19,9 +19,23 @@
 volatile uint8_t stopRX = 0; //Logic variable to indicate the stopping of the RX
 uint8_t nRF24_payload[32]; //Buffer to store a payload of maximum width
 
+TaskHandle_t xTransmitHandle = NULL;
+TaskHandle_t xReceiveTask = NULL;
+TaskHandle_t xTaskInfoTransmitHandle = NULL;
+
+StaticTask_t xTransmitTaskBuffer;
+StaticTask_t xReceiveTaskBuffer;
+StaticTask_t xTaskInfoTransmitTaskBuffer;
+
+/* Structure that will hold the TCB of the task being created. */
+
+StackType_t xTransmitTaskStack[ TRANSMIT_TASK_STACK_SIZE ];
+StackType_t xReceiveTaskStack[RECEIVE_TASK_STACK_SIZE];
+StackType_t xTaskInfoTransmitTaskStack[TASKINFOTRANSMIT_TASK_STACK_SIZE];
+
 TaskHandle_t xReceiveTask;
 SemaphoreHandle_t xnRF24Semaphore;
-
+StaticSemaphore_t xnRF24MutexBuffer;
 void vSetupNRF24() {
 	// NRF24 Interrupt pin initialization
 	LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_AFIO);
@@ -100,7 +114,7 @@ void vTransmitTask(void *pvParameters) {
 	nRF24_TransmitPacket(nRF24_payload, 32);
 
 	while (1) {
-		if (xEventGroupWaitBits(xDataEventGroup,
+		if (xEventGroupWaitBits(xDataEventGroupHandle,
 		DATA_EVENT_GROUP_BH1750_Msk | DATA_EVENT_GROUP_MPU9250_Msk,
 		pdTRUE, pdTRUE, portMAX_DELAY)) {
 			if (xSemaphoreTake(xnRF24Semaphore, pdMS_TO_TICKS(250)) == pdFALSE) {

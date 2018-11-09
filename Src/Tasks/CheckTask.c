@@ -3,6 +3,12 @@
 #include "delay.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "Tasks/CheckTask.h"
+
+TaskHandle_t xCheckHandle1 = NULL;
+TaskHandle_t xCheckHandle2 = NULL;
+StaticTask_t xCheckTaskBuffer;
+StackType_t xCheckTaskStack[ CHECK_TASK_STACK_SIZE ];
 
 /**
  * A task that periodically prints a heartbeat message via UART

@@ -30,32 +30,51 @@
 
 void prvSetupHardware();
 
-int main(void) {
+
+int main(void){
 	prvSetupHardware();
 	UART_SendStr("CubeSAT booting up...\r\n");
+	xI2CSemaphore = xSemaphoreCreateMutexStatic(&xI2CMutexBuffer);
+	//xI2CSemaphore = xSemaphoreCreateMutex();
+	xDataEventGroupHandle = xEventGroupCreateStatic(&xDataCreatedEventGroup);
+	//xDataEventGroup = xEventGroupCreate();
 
-	xI2CSemaphore = xSemaphoreCreateMutex();
-	xDataEventGroup = xEventGroupCreate();
+	xCheckHandle1 = xTaskCreateStatic(vCheckTask, "Check", CHECK_TASK_STACK_SIZE, (void*) 1, 1, xCheckTaskStack, &xCheckTaskBuffer );
+	xCheckHandle2 = xTaskCreateStatic(vCheckTask, "Check", CHECK_TASK_STACK_SIZE, (void*) 2, 8, xCheckTaskStack, &xCheckTaskBuffer );
 
-	xTaskCreate(vCheckTask, "Check", 200, (void*) 1, 1, NULL);
-	xTaskCreate(vCheckTask, "Check", 200, (void*) 2, 8, NULL);
+	//xTaskCreate(vCheckTask, "Check", 200, (void*) 1, 1, NULL);
+	//xTaskCreate(vCheckTask, "Check", 200, (void*) 2, 8, NULL);
 #if SAT_Enable_Sensors
-	xTaskCreate(vMPU9250Task, "MPU9250", 400, NULL, 4, NULL);
-	xTaskCreate(vBH1750Task, "BH1750", 400, NULL, 4, NULL);
+	xMPU9250Handle = xTaskCreateStatic(vMPU9250Task, "MPU9250", MPU9250_TASK_STACK_SIZE,NULL, 4,xMPU9250TaskStack, &xMPU9250TaskBuffer);
+	//xTaskCreate(vMPU9250Task, "MPU9250", 400, NULL, 4, NULL);
+	xBH1750Handle = xTaskCreateStatic(vBH1750Task, "BH1750", BH1750_TASK_STACK_SIZE,NULL, 4,xBH1750TaskStack, &xBH1750TaskBuffer);
+	//xTaskCreate(vBH1750Task, "BH1750", 400, NULL, 4, NULL);
 #endif
 
-	xTaskCreate(vUARTTask, "UART", 300, NULL, 3, NULL);
-	xTaskCreate(vRefreshWWDGTask, "RefreshWWDG", 100, NULL, 6, NULL);
-	xTaskCreate(vBlinkyTask, "Blinking", 200, NULL, 3, NULL);
+	xUARTHandle = xTaskCreateStatic(vUARTTask, "UART", UART_TASK_STACK_SIZE,NULL, 3,xUARTTaskStack, &xUARTTaskBuffer);
+	//xTaskCreate(vUARTTask, "UART", 300, NULL, 3, NULL);
+	xWWDGHandle = xTaskCreateStatic(vRefreshWWDGTask, "RefreshWWDG", REFRESHWWDG_TASK_STACK_SIZE,NULL, 6,xRefreshWWDGTaskStack, &xRefreshWWDGTaskBuffer);
+	//xTaskCreate(vRefreshWWDGTask, "RefreshWWDG", 100, NULL, 6, NULL);
+	xBlinkyHandle = xTaskCreateStatic(vBlinkyTask, "Blinky", BLINKY_TASK_STACK_SIZE,NULL, 3,xBlinkyTaskStack, &xBlinkyTaskBuffer);
+	//xTaskCreate(vBlinkyTask, "Blinking", 200, NULL, 3, NULL);
 
 #if SAT_Enable_NRF24
-	xTaskCreate(vTransmitTask, "NRF_TX", 500, NULL, 2, NULL);
-	xTaskCreate(vReceiveTask, "NRF_RX", 500, NULL, 2, &xReceiveTask);
- 	xTaskCreate(vTaskInfoTransmitTask, "NRF_TX_TaskInfo", 400, NULL, 1, NULL);
- 	xnRF24Semaphore = xSemaphoreCreateMutex();
+	xTransmitHandle = xTaskCreateStatic(vTransmitTask, "Transmit", TRANSMIT_TASK_STACK_SIZE,NULL, 2,xTransmitTaskStack, &xTransmitTaskBuffer);
+//	xTaskCreate(vTransmitTask, "NRF_TX", 500, NULL, 2, NULL);
+	xReceiveTask = xTaskCreateStatic(vReceiveTask, "Receive", RECEIVE_TASK_STACK_SIZE,NULL, 2,xReceiveTaskStack, &xReceiveTaskBuffer);
+
+//	xTaskCreate(vReceiveTask, "NRF_RX", 500, NULL, 2, &xReceiveTask);
+
+	xTaskInfoTransmitHandle = xTaskCreateStatic(vTaskInfoTransmitTask, "TaskInfoTransmit", TASKINFOTRANSMIT_TASK_STACK_SIZE,NULL, 1,xTaskInfoTransmitTaskStack, &xTaskInfoTransmitTaskBuffer);
+
+ //	xTaskCreate(vTaskInfoTransmitTask, "NRF_TX_TaskInfo", 400, NULL, 1, NULL);
+
+	xnRF24Semaphore = xSemaphoreCreateMutexStatic(&xnRF24MutexBuffer);
+ //	xnRF24Semaphore = xSemaphoreCreateMutex();
 #endif
 
-	xUARTQueue = xQueueCreate(45, sizeof(UARTMessage_t *));
+	//xUARTQueue = xQueueCreate(45, sizeof(UARTMessage_t *));
+ 	xUARTQueue = xQueueCreateStatic(45, sizeof(UARTMessage_t *), 45*sizeof(UARTMessage_t *),&xStaticUARTQueue);
 
 	osQueueUARTMessage("Hello world %d from FreeRTOS\r\n", xTaskGetTickCount());
 	osQueueUARTMessage("Compiled at " __DATE__ " " __TIME__ "\r\n");

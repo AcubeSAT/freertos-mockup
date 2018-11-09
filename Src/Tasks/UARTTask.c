@@ -7,11 +7,17 @@
 
 #include "Tasks/UARTTask.h"
 QueueHandle_t xUARTQueue;
+StaticQueue_t xStaticUARTQueue;
+
+TaskHandle_t xUARTHandle = NULL;
 
 #define LL_UART_DMA_CHAN_TX __LL_DMA_GET_CHANNEL(UART_DMA_CHAN_TX)
 #define LL_DMA_IsActive
 
 DMA_HandleTypeDef dma;
+
+StaticTask_t xUARTTaskBuffer;
+StackType_t xUARTTaskStack[UART_TASK_STACK_SIZE];
 
 /**
  * A task that prints strings via UART through DMA
