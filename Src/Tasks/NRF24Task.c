@@ -32,6 +32,7 @@ void vFlashWrite(uint32_t ulAddress, uint64_t data)
 	HAL_FLASH_Unlock();
 	__HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_EOP | FLASH_FLAG_OPTVERR | FLASH_FLAG_PGERR | FLASH_FLAG_WRPERR);
 	HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, ulAddress, data);
+
 	HAL_FLASH_Lock();
 	taskEXIT_CRITICAL();  // Exit the critical section, since the desired operation has finished
 }
@@ -203,7 +204,7 @@ void vReceiveTask(void *pvParameters) {
 					} else if (strstr(tokenCh, "Patch")) {
 						tokenCh = strtok(NULL, ":"); // Tokenize the string
 						osQueueUARTMessage("->>  Received value change command\r\n");
-						vFlashWrite((uint32_t)0x20001dbf, (uint64_t)strtol(tokenCh, NULL, 0));
+						vFlashWrite((uint32_t)(0x0800a1b8 + 1), (uint64_t)strtol(tokenCh, NULL, 0));
 					}
 				}
 				nRF24_FlushRX();
