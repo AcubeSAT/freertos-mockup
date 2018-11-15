@@ -28,12 +28,25 @@ SemaphoreHandle_t xnRF24Semaphore;
 
 void vFlashWrite(uint32_t ulAddress, uint64_t data)
 {
+	FLASH_EraseInitTypeDef eraseStruct;
+	uint32_t pageError = 0;
+
 	taskENTER_CRITICAL();  // Enter in a critical section
+	LL_RCC_HSI_Enable();
+	while (LL_RCC_HSI_IsReady() != 1) {
+	};
 	HAL_FLASH_Unlock();
 	__HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_EOP | FLASH_FLAG_OPTVERR | FLASH_FLAG_PGERR | FLASH_FLAG_WRPERR);
+
+	eraseStruct.TypeErase = FLASH_TYPEERASE_PAGES;
+	eraseStruct.NbPages = (uint32_t)1;
+	eraseStruct.PageAddress = ulAddress;
+
+//	HAL_FLASHEx_Erase(&eraseStruct, &pageError);
 	HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, ulAddress, data);
 
 	HAL_FLASH_Lock();
+	LL_RCC_HSI_Disable();
 	taskEXIT_CRITICAL();  // Exit the critical section, since the desired operation has finished
 }
 
@@ -204,7 +217,7 @@ void vReceiveTask(void *pvParameters) {
 					} else if (strstr(tokenCh, "Patch")) {
 						tokenCh = strtok(NULL, ":"); // Tokenize the string
 						osQueueUARTMessage("->>  Received value change command\r\n");
-						vFlashWrite((uint32_t)(0x0800a1b8 + 1), (uint64_t)strtol(tokenCh, NULL, 0));
+						vFlashWrite((uint32_t)(0x0800a0c2), (uint64_t)*tokenCh);
 					}
 				}
 				nRF24_FlushRX();
