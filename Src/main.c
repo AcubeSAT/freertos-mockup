@@ -39,7 +39,7 @@ int main(void) {
 	xDataEventGroup = xEventGroupCreate();
 
 	xTaskCreate(vCheckTask, "Check", 200, (void*) 1, 1, NULL);
-	//xTaskCreate(vCheckTask, "Check", 200, (void*) 2, 8, NULL);
+	xTaskCreate(vCheckTask, "Check", 200, (void*) 2, 8, NULL);
 
 #if SAT_Enable_Sensors
 	xTaskCreate(vMPU9250Task, "MPU9250", 300, NULL, 4, NULL);

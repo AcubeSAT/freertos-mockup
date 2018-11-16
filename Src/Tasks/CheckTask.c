@@ -7,16 +7,13 @@
 /**
  * A task that periodically prints a heartbeat message via UART
  */
-
-
 void vCheckTask(void *pvParameters) {
 	uint32_t value = (uint32_t) pvParameters;
 
 	for (;;) {
 		osQueueUARTMessage("%u SystemGood %d \r\n", value, xTaskGetTickCount());
-
 		//taskYIELD();
-		vTaskDelay(pdMS_TO_TICKS(3000));
+		vTaskDelay(pdMS_TO_TICKS(1000));
 	}
 }
 

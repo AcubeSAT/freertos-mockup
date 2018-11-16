@@ -150,11 +150,6 @@ void vTransmitTask(void *pvParameters) {
 }
 
 void vReceiveTask(void *pvParameters) {
-	uint8_t payload_length; //Length of received payload
-	volatile uint8_t *payL_addr = &payload_length;
-
-	//vFlashWrite((uint32_t)0x20002c7f, (uint64_t) 5);
-
 	while (1) {
 		if (ulTaskNotifyTake(pdFALSE, portMAX_DELAY)) {
 			if (xSemaphoreTake(xnRF24Semaphore, pdMS_TO_TICKS(250)) == pdFALSE) {
