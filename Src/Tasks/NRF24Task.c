@@ -33,10 +33,13 @@ void vFlashWrite(uint32_t ulAddress, uint64_t data) {
 	FLASH_EraseInitTypeDef eraseStruct;
 	uint32_t pageError = 0;
 	uint16_t pageData[1024];
+	volatile uint16_t errCount = 0;
+	volatile size_t errCountID[10];
+	volatile uint16_t errValue[10];
 
 	taskENTER_CRITICAL();  // Enter in a critical section
 	// Read the flash content before deleting and writing
-	for (size_t i = 0; i < 1024; i+=2) {
+	for (size_t i = 0; i < 1024; i++) {
 		pageData[i] = ulFlashReadN(ulAddress + i);
 	}
 
@@ -53,17 +56,26 @@ void vFlashWrite(uint32_t ulAddress, uint64_t data) {
 
 	HAL_FLASHEx_Erase(&eraseStruct, &pageError);
 	for (size_t i = 0; i < 1024; i += 2) {
-		if (ulAddress + i == 0x0800a148) {
-			HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, ulAddress + i,
-					(uint64_t)(0x3334));
-		} else {
+		//if (ulAddress + i == 0x0800a148) {
+			//HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, ulAddress + i,
+					//(uint64_t)(0x3334));
+		//} else {
 			HAL_FLASH_Program(FLASH_TYPEPROGRAM_HALFWORD, ulAddress + i, pageData[i]);
+		//}
+	}
+
+	for (size_t i = 0, j = 0; i < 1024; i++) {
+		if ( !(pageData[i] == ulFlashReadN(ulAddress + i)) ) {
+			errCount++;
+			errCountID[j] = i;
+			errValue[j++] = ulFlashReadN(ulAddress + i);
 		}
 	}
 
 	HAL_FLASH_Lock();
 	//LL_RCC_HSI_Disable();
 	taskEXIT_CRITICAL();  // Exit the critical section, since the desired operation has finished
+	//vTaskStartScheduler();
 }
 
 void vSetupNRF24() {
