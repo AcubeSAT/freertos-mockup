@@ -25,28 +25,44 @@ uint8_t nRF24_payload[32] = {"\0"}; //Buffer to store a payload of maximum width
 TaskHandle_t xReceiveTask;
 SemaphoreHandle_t xnRF24Semaphore;
 
+uint16_t ulFlashReadN(uint32_t ulAddress) {
+	return *(uint16_t *)ulAddress;
+}
 
-void vFlashWrite(uint32_t ulAddress, uint64_t data)
-{
+void vFlashWrite(uint32_t ulAddress, uint64_t data) {
 	FLASH_EraseInitTypeDef eraseStruct;
 	uint32_t pageError = 0;
+	uint16_t pageData[1024];
 
 	taskENTER_CRITICAL();  // Enter in a critical section
-	LL_RCC_HSI_Enable();
+	// Read the flash content before deleting and writing
+	for (size_t i = 0; i < 1024; i+=2) {
+		pageData[i] = ulFlashReadN(ulAddress + i);
+	}
+
+	/*LL_RCC_HSI_Enable();
 	while (LL_RCC_HSI_IsReady() != 1) {
-	};
+	};*/
+
 	HAL_FLASH_Unlock();
 	__HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_EOP | FLASH_FLAG_OPTVERR | FLASH_FLAG_PGERR | FLASH_FLAG_WRPERR);
 
 	eraseStruct.TypeErase = FLASH_TYPEERASE_PAGES;
 	eraseStruct.NbPages = (uint32_t)1;
-	eraseStruct.PageAddress = ulAddress;
+	eraseStruct.PageAddress = FLASH_BASE + 1024*40;
 
-//	HAL_FLASHEx_Erase(&eraseStruct, &pageError);
-	HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, ulAddress, data);
+	HAL_FLASHEx_Erase(&eraseStruct, &pageError);
+	for (size_t i = 0; i < 1024; i += 2) {
+		if (ulAddress + i == 0x0800a148) {
+			HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, ulAddress + i,
+					(uint64_t)(0x3334));
+		} else {
+			HAL_FLASH_Program(FLASH_TYPEPROGRAM_HALFWORD, ulAddress + i, pageData[i]);
+		}
+	}
 
 	HAL_FLASH_Lock();
-	LL_RCC_HSI_Disable();
+	//LL_RCC_HSI_Disable();
 	taskEXIT_CRITICAL();  // Exit the critical section, since the desired operation has finished
 }
 
@@ -217,7 +233,7 @@ void vReceiveTask(void *pvParameters) {
 					} else if (strstr(tokenCh, "Patch")) {
 						tokenCh = strtok(NULL, ":"); // Tokenize the string
 						osQueueUARTMessage("->>  Received value change command\r\n");
-						vFlashWrite((uint32_t)(0x0800a0c2), (uint64_t)*tokenCh);
+						vFlashWrite((uint32_t)(0x0800a000), (uint64_t)0x33);
 					}
 				}
 				nRF24_FlushRX();
