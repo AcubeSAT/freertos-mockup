@@ -8,27 +8,13 @@
  * A task that periodically prints a heartbeat message via UART
  */
 
-// Preliminary version of flash reading function
-uint16_t ulFlashRead(uint32_t ulAddress) {
-	return *(uint16_t *)ulAddress;
-}
 
 void vCheckTask(void *pvParameters) {
 	uint32_t value = (uint32_t) pvParameters;
-	char cTempArray[12] = {"\0"};
-#define MEM_ADDR 0x0800a148
 
 	for (;;) {
-		osQueueUARTMessage("Addr: 0x%08X, Value: %c\r\n", (uint32_t)(MEM_ADDR),
-				(char)ulFlashRead((uint32_t)(MEM_ADDR)));
-
-		/*for (size_t i = 0; i < 38; i++) {
-			cTempArray[i] = (char)ulFlashRead((uint32_t)(MEM_ADDR + i));
-			osQueueUARTMessage("Addr: 0x%08X, Value: %c\r\n", (uint32_t)(MEM_ADDR + i), cTempArray[i]);
-		}
 		osQueueUARTMessage("%u SystemGood %d \r\n", value, xTaskGetTickCount());
-		osQueueUARTMessage("Value of var from memory addr 0x%08X: %s\r\n", MEM_ADDR, cTempArray);
-		*/
+
 		//taskYIELD();
 		vTaskDelay(pdMS_TO_TICKS(3000));
 	}
