@@ -155,6 +155,7 @@ void vReceiveTask(void *pvParameters) {
 			if (xSemaphoreTake(xnRF24Semaphore, pdMS_TO_TICKS(250)) == pdFALSE) {
 				UART_SendStr("FATAL Error: nRF24Receive timeout");
 			} else {
+				uint8_t payload_length; //Length of received payload
 				char* tokenCh = NULL; //Save the tokenized string
 
 				//Set operational mode (PRX == receiver)
@@ -190,6 +191,8 @@ void vReceiveTask(void *pvParameters) {
 						tokenCh = strtok(NULL, ":"); // Tokenize the string
 						osQueueUARTMessage("->>  Received value change command\r\n");
 
+						// Code is just for demonstration
+						// Check your list file in Debugging and change values accordingly
 						uint16_t addID[2] = {418, 420};
 						uint16_t data[2] = {0x3334, 0x3639};
 

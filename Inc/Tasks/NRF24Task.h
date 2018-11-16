@@ -1,9 +1,6 @@
 #ifndef INC_TASKS_NRF24TASK_H_
 #define INC_TASKS_NRF24TASK_H_
 
-#include <stdlib.h>
-#include "stm32f1xx_ll_rcc.h"
-
 #include "MockupConfig.h"
 #include "FreeRTOS.h"
 #include "task.h"
