@@ -27,6 +27,4 @@ void vSetupIWDG() {
 	IwdgHandle.Init.Prescaler = IWDG_PRESCALER_32;
 	IwdgHandle.Init.Reload = 4095;
 	HAL_IWDG_Init(&IwdgHandle);
-	TIMx_CLK_ENABLE();
-	//__HAL_RCC_IWDG_CLK_ENABLE(); // Do I need this?!
 }
