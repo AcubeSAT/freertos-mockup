@@ -28,6 +28,7 @@
 #include "Tasks/UARTTask.h"
 #include "Tasks/GPSTask.h"
 #include "Tasks/WWDGTask.h"
+#include "Tasks/IWDGTask.h"
 
 void prvSetupHardware();
 
@@ -49,7 +50,7 @@ int main(void) {
 	xTaskCreate(vUARTTask, "UART", 300, NULL, 3, &xUARTTaskHandle);
 	xTaskCreate(vRefreshWWDGTask, "RefreshWWDG", 100, NULL, 6, NULL);
 	xTaskCreate(vBlinkyTask, "Blinking", 100, NULL, 3, NULL);
-
+	xTaskCreate(vRefreshIWDGTask, "RefreshIWDG", 100, NULL, 6, NULL);
 #if SAT_Enable_NRF24
 	xTaskCreate(vTransmitTask, "NRF_TX", 250, NULL, 1, NULL);
 	xTaskCreate(vReceiveTask, "NRF_RX", 250, NULL, 1, &xReceiveTask);
@@ -65,6 +66,7 @@ int main(void) {
 	osQueueUARTMessage("Hello world %d from FreeRTOS\r\n", xTaskGetTickCount());
 	osQueueUARTMessage("Compiled at " __DATE__ " " __TIME__ "\r\n");
 	vSetupWWDG();
+	vSetupIWDG();
 	vDisableDelayHelper(); // Don't waste time on HAL_Delay
 	vTaskStartScheduler();
 }
